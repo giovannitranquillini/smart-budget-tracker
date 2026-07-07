@@ -10,13 +10,31 @@ export const BudgetService = () => {
         await prisma.budgetCategory.create({data: params});
     }
 
-    async function createBudgetRecord(params: { amount: number; description: string, date: Date, categoryId: string }) {
+    async function listBudgetCategory(): Promise<BudgetCategory[]> {
+        logger.info(`[BudgetService] Listing budget categories.`);
+        return await prisma.budgetCategory.findMany();
+    }
+
+    async function createBudgetRecord(params: { amount: number; description: string, categoryId: string }) {
         logger.info(`[BudgetService] Creating new budget record.`);
-        await prisma.budgetRecord.create({data: params});
+
+        const payload = {
+            ...params,
+            date: new Date()
+        }
+
+        await prisma.budgetRecord.create({data: payload});
+    }
+
+    async function listBudgetRecord(): Promise<BudgetRecord[]> {
+        logger.info(`[BudgetService] Listing budget records.`);
+        return await prisma.budgetRecord.findMany();
     }
 
     return {
         createBudgetCategory,
-        createBudgetRecord
+        listBudgetCategory,
+        createBudgetRecord,
+        listBudgetRecord
     }
 }

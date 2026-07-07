@@ -16,9 +16,10 @@ export const CreateBudgetRecordInput = {
         type: 'object',
         properties: {
             amount: { type: 'number' },
-            description: { type: 'string' }
+            description: { type: 'string' },
+            categoryId: { type: 'string' }
         },
-        required: ['amount', 'description']
+        required: ['amount', 'description', 'categoryId']
     },
     response: {
         201: {}
