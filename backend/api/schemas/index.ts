@@ -7,7 +7,13 @@ export const CreateBudgetCategoryInput = {
         required: ['name']
     },
     response: {
-        201: {}
+        201: {},
+        500: {
+            type: 'object',
+            properties: {
+                error: { type: 'string' }
+            }
+        }
     }
 };
 
@@ -22,6 +28,12 @@ export const CreateBudgetRecordInput = {
         required: ['amount', 'description', 'categoryId']
     },
     response: {
-        201: {}
+        201: {},
+        500: {
+            type: 'object',
+            properties: {
+                error: { type: 'string' }
+            }
+        }
     }
 };
