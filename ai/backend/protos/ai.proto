@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package ai.backend;
+
+// Service definition for the AI Backend. speech-to-text and llm
+// will connetect to it to communicate the successful elaboration.
+service AIService {
+    rpc SubmitTranscription(TranscriptionResult) returns (Ack) {}
+
+    rpc SubmitBudgetRecord(BudgetRecordResult) returns (Ack) {}
+}
+
+message TranscriptionResult {
+  string audio_id = 1;
+  string transcription = 2;
+}
+
+message BudgetRecordResult {
+  string audio_id = 1;
+  string payload = 2; // JSON containing the budget record elaborated    
+}
+
+message Ack {
+  bool ok = 1;
+  string message = 2;
+}

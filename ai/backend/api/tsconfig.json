@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2023",
+    "strict": true,
+    "esModuleInterop": true,
+    "ignoreDeprecations": "6.0",
+    "skipLibCheck": true,
+
+    "outDir": "dist",
+    "types": ["node"],
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@api/*": ["api/*"],
+      "@core/*": ["core/*"]
+    }
+  },
+  "include": ["**/*"],
+  "exclude": ["**/*.spec.ts", "dist", "node_modules"]
+}

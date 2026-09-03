@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package ai.speech_to_text;
+
+message TranscriptionRequest {
+  string transcribed_text = 1;
+}
+
+message TranscriptionResponse {
+  string result = 1;
+}
+
+service TranscriptionService {
+  rpc TranscribeAudio(TranscriptionRequest) returns (TranscriptionResponse) {}
+}
