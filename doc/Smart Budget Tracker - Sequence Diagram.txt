@@ -1,0 +1,41 @@
+title Smart Budget Tracker
+
+actor User
+participantgroup **Budget Tracker**
+participant UI
+participant Domain Backend
+database PostgreSQL
+end
+participantgroup **AI**
+participant AI Backend
+participant speech-to-text
+participant LLM
+end
+
+User->UI:Register audio to transcribe
+User<--UI:confirm
+UI->Domain Backend:<align:center>HTTP \n //multipart/form-data//
+note over Domain Backend:Here the //domain backend// \nwill store the **audio file** \n in a **temporary** storage 
+note over AI Backend:The //AI backend// group uses\n an **event-driven communication**\n to simulate a system that should \nsupport many requests
+group transcription [AI]
+Domain Backend->>AI Backend:<align:center>**msg**: publish \nto queue "//transcriber//"
+activate AI Backend
+AI Backend->>speech-to-text:<align:center>**msg**: publish \nto queue "//speech-to-text//"
+activate speech-to-text
+speech-to-text->AI Backend:<align:center>**gRPC**: transcription
+deactivate speech-to-text
+AI Backend->>LLM:<align:center>**msg**: publish \nto queue "//llm//"
+activate LLM
+LLM->AI Backend:<align:center>**gRPC**: budget record \npayload
+deactivate LLM
+AI Backend->>Domain Backend:<align:center>**msg**: publish to \nqueue "//budget-record//"
+deactivate AI Backend
+end
+Domain Backend-->>PostgreSQL:<align:center>Save a new budget record
+
+lifelinestyle User ;solid
+lifelinestyle UI ;solid
+lifelinestyle Domain Backend ;solid
+lifelinestyle AI Backend ;solid
+lifelinestyle speech-to-text ;solid
+lifelinestyle LLM ;solid
