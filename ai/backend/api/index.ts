@@ -39,7 +39,8 @@ await server.register(swaggerUi, {
   routePrefix: '/docs'
 });
 
-server.listen({ port: 3002 }, (err, address) => {
+// host 0.0.0.0: inside the container loopback is not reachable from the host port mapping
+server.listen({ port: 3002, host: '0.0.0.0' }, (err, address) => {
   if (err) {
     console.error(err)
     process.exit(1)

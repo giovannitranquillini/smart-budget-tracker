@@ -1,7 +1,10 @@
 import grpc from '@grpc/grpc-js';
 import protoLoader from '@grpc/proto-loader';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
-const packageDefinition = protoLoader.loadSync('../protos/ai.proto');
+const protoPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../protos/ai.proto');
+const packageDefinition = protoLoader.loadSync(protoPath);
 const aiProto = grpc.loadPackageDefinition(packageDefinition).ai.backend;
 
 export function startGrpcServer({ onTranscription, onBudgetRecord, host = '0.0.0.0:50051' }) {

@@ -1,10 +1,23 @@
 import fastify from 'fastify'
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import multipart from '@fastify/multipart';
+import cors from '@fastify/cors';
 
 import { registerRoutes } from '@api/routes/index.js'
 
 const server = fastify()
+
+await server.register(cors, {
+  origin: true
+});
+
+// needed by POST /budget/record/audio: the UI sends the recording as multipart/form-data
+await server.register(multipart, {
+  limits: {
+    fileSize: 25 * 1024 * 1024
+  }
+});
 
 await server.register(swagger, {
   openapi: {
@@ -29,7 +42,8 @@ await server.register(swaggerUi, {
 
 registerRoutes(server)
 
-server.listen({ port: 3001 }, (err, address) => {
+// host 0.0.0.0: inside the container loopback is not reachable from the host port mapping
+server.listen({ port: 3001, host: '0.0.0.0' }, (err, address) => {
   if (err) {
     console.error(err)
     process.exit(1)

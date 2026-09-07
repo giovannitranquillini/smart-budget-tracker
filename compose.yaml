@@ -23,11 +23,67 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+
+  web: 
+    build: ./ui
+    container_name: web
+    environment:
+      NODE_ENV: development
+    ports:
+      - "5173:5173"
+
+  backend: 
+    build: ./backend
+    container_name: backend
+    environment:
+      DATABASE_URL: postgres://admin:admin@postgres:5432/smart_budget_tracker
+      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672/
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
     
+  ai-backend:
+    build: 
+      context: ./ai/backend
+      dockerfile: api/Dockerfile
+    container_name: ai-backend
+    environment:
+      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672/
+    ports:
+      - "3002:3002"
+      - "50051:50051"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  speech-to-text:
+    build: ./ai/speech-to-text
+    container_name: speech-to-text
+    environment:
+      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672/
+      AUDIO_STORAGE_PATH: /audio_files
+    volumes:
+      - ./audio_files:/audio_files
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
 volumes:
   postgres_data:
   rabbitmq_data:

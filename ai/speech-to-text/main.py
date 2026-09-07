@@ -15,8 +15,12 @@ def callback(ch, method, properties, body):
     send_message(text)
 
 def main():
-    credentials = pika.PlainCredentials('admin', 'admin')
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost', credentials=credentials))
+    connection_url = os.environ.get('RABBITMQ_URL')
+
+    if not connection_url:
+        raise RuntimeError("RABBITMQ_URL environment variable is not set")
+
+    connection = pika.BlockingConnection(pika.URLParameters(connection_url))
     channel = connection.channel()
 
     channel.queue_declare(

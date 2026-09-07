@@ -15,8 +15,8 @@
 
     "baseUrl": ".",
     "paths": {
-      "@api/*": ["api/*"],
-      "@core/*": ["core/*"]
+      "@api/*": ["src/api/*"],
+      "@core/*": ["src/core/*"]
     }
   },
   "include": ["**/*"],

@@ -1,6 +1,12 @@
 import amqp from "amqplib";
 
-const connection = await amqp.connect('amqp://admin:admin@localhost');
+const connectionUrl = process.env.RABBITMQ_URL;
+
+if(!connectionUrl) {
+  throw new Error("RABBITMQ_URL environment variable is not set");
+}
+
+const connection = await amqp.connect(connectionUrl);
 
 // create the channel over which we will send the message
 const channel = await connection.createChannel();
