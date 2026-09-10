@@ -12,8 +12,6 @@
   "license": "ISC",
   "packageManager": "pnpm@10.30.3",
   "dependencies": {
-    "amqplib": "^2.0.1",
-    "@grpc/grpc-js": "^1.8.18",
-    "@grpc/proto-loader": "^0.7.6"
+    "amqplib": "^2.0.1"
   }
 }

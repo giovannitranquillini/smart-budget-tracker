@@ -43,13 +43,16 @@ services:
     environment:
       DATABASE_URL: postgres://admin:admin@postgres:5432/smart_budget_tracker
       RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672/
+      AUDIO_STORAGE_PATH: /audio_files
     ports:
       - "3001:3001"
+    volumes:
+      - ./audio_files:/audio_files
     depends_on:
       postgres:
         condition: service_started
       rabbitmq:
-        condition: service_started
+        condition: service_healthy
     
   ai-backend:
     build: 

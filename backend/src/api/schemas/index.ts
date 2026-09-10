@@ -18,14 +18,10 @@ export const CreateBudgetCategoryInput = {
 };
 
 export const CreateBudgetRecordFromAudioInput = {
+    // No body schema: the file is consumed as a stream via request.file(), so
+    // request.body stays undefined and any JSON body validation would reject
+    // every upload before the handler runs. The handler checks for the file.
     consumes: ['multipart/form-data'],
-    body: {
-        type: 'object',
-        properties: {
-            audio: { type: 'string', format: 'binary' }
-        },
-        required: ['audio']
-    },
     response: {
         202: {
             type: 'object',

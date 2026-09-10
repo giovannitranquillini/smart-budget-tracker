@@ -32,12 +32,11 @@ export const registerRoutes = (server: FastifyInstance) => {
     }
   });
 
-
   server.post('/budget/record', {schema: CreateBudgetRecordInput}, async (request, reply) => {
     try {
       logger.info(`[API] Creating new budget record.`);
       await budgetService.createBudgetRecord(request.body as any);
-      reply.status(201);
+      reply.status(201).send();
     } catch (error) {
       logger.error(`[API] Error creating budget record: ${error}`);
       reply.status(500).send({ error: 'Failed to create budget record' });
@@ -59,7 +58,7 @@ export const registerRoutes = (server: FastifyInstance) => {
     try {
       logger.info(`[API] Creating new budget category.`);
       await budgetService.createBudgetCategory(request.body as any);
-      reply.status(201);
+      reply.status(201).send();
     } catch (error) {
       logger.error(`[API] Error creating budget category: ${error}`);
       reply.status(500).send({ error: 'Failed to create budget category' });

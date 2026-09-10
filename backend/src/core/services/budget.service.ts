@@ -28,7 +28,11 @@ export const BudgetService = () => {
 
     async function listBudgetRecord(): Promise<BudgetRecord[]> {
         logger.info(`[BudgetService] Listing budget records.`);
-        return await prisma.budgetRecord.findMany();
+        // the UI table shows the category name, not its id
+        return await prisma.budgetRecord.findMany({
+            include: { category: { select: { name: true } } },
+            orderBy: { date: 'desc' }
+        });
     }
 
     return {
