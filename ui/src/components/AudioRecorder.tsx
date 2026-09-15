@@ -13,9 +13,8 @@ type AudioRecorderProps = {
 const LABELS: Record<RecorderStatus, string> = {
   idle: 'Detta il movimento e lascia che l’AI compili la form',
   recording: 'Sto ascoltando… premi stop quando hai finito',
-  processing: 'Sto inviando l’audio…',
-  // Il backend elabora l'audio in modo asincrono e non restituisce ancora i campi.
-  done: 'Audio inviato: l’AI lo sta elaborando',
+  processing: 'Sto elaborando l’audio…',
+  done: 'Trascrizione pronta: controlla i campi e salva',
   error: 'Non sono riuscito a leggere l’audio',
 }
 

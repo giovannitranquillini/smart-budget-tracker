@@ -1,7 +1,7 @@
 // src/components/RecordForm.tsx
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import AudioRecorder, { type RecorderStatus } from './AudioRecorder'
-import { createBudgetRecord, listBudgetCategories, uploadBudgetRecordAudio } from '../api'
+import { createBudgetRecord, listBudgetCategories, uploadBudgetRecordAudio, waitForTranscription } from '../api'
 import type { BudgetCategory } from '../types'
 
 // Il backend salva il file con l'estensione del nome inviato.
@@ -57,9 +57,16 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
 
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
+  const transcriptionRef = useRef<AbortController | null>(null)
 
-  // Se la modal si chiude durante la registrazione, libera il microfono.
-  useEffect(() => () => stopTracks(recorderRef.current), [])
+  // Se la modal si chiude: libera il microfono e chiudi lo stream della trascrizione.
+  useEffect(
+    () => () => {
+      stopTracks(recorderRef.current)
+      transcriptionRef.current?.abort()
+    },
+    []
+  )
 
   const startRecording = async () => {
     setErrorMessage('')
@@ -109,13 +116,22 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
 
       if (audio.size === 0) throw new Error('Empty recording')
 
-      await uploadBudgetRecordAudio(audio, `recording.${extensionFor(audio.type)}`)
+      const jobId = await uploadBudgetRecordAudio(audio, `recording.${extensionFor(audio.type)}`)
 
+      const transcription = new AbortController()
+      transcriptionRef.current = transcription
+
+      const text = await waitForTranscription(jobId, transcription.signal)
+
+      setDescription(text)
       setStatus('done')
     } catch (error) {
-      console.error('uploadBudgetRecordAudio error', error)
+      // Modal chiusa durante l'attesa: il componente non c'è più, niente da mostrare.
+      if (transcriptionRef.current?.signal.aborted) return
 
-      setErrorMessage('Invio dell’audio non riuscito, riprova.')
+      console.error('audio transcription error', error)
+
+      setErrorMessage('Elaborazione dell’audio non riuscita, riprova.')
       setStatus('error')
     }
   }
