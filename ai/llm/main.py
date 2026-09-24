@@ -1,0 +1,71 @@
+from src.llm import execute_llm
+import os
+from dotenv import load_dotenv
+import pika, sys, os
+import json
+
+def callback(ch, method, properties, body):
+    print(f" [x] Received {body}")
+
+    # Decodifica il messaggio JSON
+    incoming_payload = json.loads(body.decode('utf-8'))
+
+    # manda il tutto al llm per la generazione del nuovo record
+    budget_record = execute_llm(incoming_payload['prompt'], incoming_payload['text'])
+
+    payload = {
+        "jobId": incoming_payload["jobId"],
+        "budgetRecord": budget_record,
+    }
+
+    # Invia la trascrizione sull'altra coda
+    ch.basic_publish(
+        exchange='',                 # default exchange: routing_key = nome della coda
+        routing_key='llm_processed',
+        body=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
+        properties=pika.BasicProperties(
+            content_type='application/json',
+            delivery_mode=2,         # messaggio persistente
+            correlation_id=properties.correlation_id,  # propaga l'ID se l'API lo manda
+        ),
+    )
+
+    # Ack solo dopo aver pubblicato il risultato
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+    print(f" [x] Nuovo budget record generato")
+
+def main():
+
+    print(" [*] Starting LLM service...")
+    load_dotenv()  # Load environment variables from .env file
+    connection_url = os.getenv('RABBITMQ_URL')
+
+    if not connection_url:
+        raise RuntimeError("RABBITMQ_URL environment variable is not set")
+
+    connection = pika.BlockingConnection(pika.URLParameters(connection_url))
+    channel = connection.channel()
+
+    channel.queue_declare(
+        queue='llm_to_budgeting',
+        durable=True
+    )
+
+    channel.basic_consume(
+        queue='llm_to_budgeting', 
+        on_message_callback=callback, 
+        auto_ack=False
+    )
+
+    print(' [*] Waiting for messages. To exit press CTRL+C')
+    channel.start_consuming()
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('Interrupted')
+        try:
+            sys.exit(0)
+        except SystemExit:
+            os._exit(0)

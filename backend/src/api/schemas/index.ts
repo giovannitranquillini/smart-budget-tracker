@@ -26,7 +26,7 @@ export const CreateBudgetRecordFromAudioInput = {
         202: {
             type: 'object',
             properties: {
-                status: { type: 'string' }
+                jobId: { type: 'string' }
             }
         },
         400: {

@@ -41,7 +41,6 @@ COPY --from=prod-deps      --chown=node:node /app/api/node_modules       ./node_
 COPY --from=build          --chown=node:node /app/api/dist               ./dist
 COPY --from=messaging-deps --chown=node:node /app/messaging/node_modules ./messaging/node_modules
 COPY --chown=node:node messaging/*.js ./messaging/
-COPY --chown=node:node protos ./protos
 USER node
 EXPOSE 3002 50051
 CMD ["node", "dist/index.js"]

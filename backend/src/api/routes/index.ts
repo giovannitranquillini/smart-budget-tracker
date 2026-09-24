@@ -21,11 +21,11 @@ export const registerRoutes = (server: FastifyInstance) => {
       }
 
       const content = await audio.toBuffer();
-      const filePath = await audioService.storeAudio({ filename: audio.filename, content });
+      const { filePath, audioId } = await audioService.storeAudio({ filename: audio.filename, content });
 
-      await audioService.requestTranscription(filePath);
+      await audioService.requestTranscription(audioId, filePath);
 
-      reply.status(202).send({ status: 'processing' });
+      reply.status(202).send({ jobId: audioId });
     } catch (error) {
       logger.error(`[API] Error processing audio file: ${error}`);
       reply.status(500).send({ error: 'Failed to process audio file' });
@@ -74,5 +74,32 @@ export const registerRoutes = (server: FastifyInstance) => {
       logger.error(`[API] Error fetching budget categories: ${error}`);
       reply.status(500).send({ error: 'Failed to fetch budget categories' });
     }
+  });
+
+  server.get('/budget/record/audio/:jobId/events', (request, reply) => {
+    const { jobId } = request.params as { jobId: string };
+    logger.info(`[API] Opening SSE stream for job ${jobId}.`);
+
+    // Gestiamo noi la risposta raw: Fastify non deve chiuderla né serializzarla
+    reply.hijack();
+
+    // Copia sulla risposta raw gli header già impostati da Fastify (es. CORS)
+    for (const [name, value] of Object.entries(reply.getHeaders())) {
+      if (value !== undefined) reply.raw.setHeader(name, value);
+    }
+
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    });
+
+    const unsubscribe = budgetService.subscribeToDraft(jobId, (draft) => {
+      reply.raw.write(`event: budget-record\ndata: ${JSON.stringify(draft)}\n\n`);
+      reply.raw.end();
+    });
+
+    // Client disconnesso (modal chiusa, timeout, tab chiusa) oppure risposta terminata
+    reply.raw.on('close', unsubscribe);
   });
 }

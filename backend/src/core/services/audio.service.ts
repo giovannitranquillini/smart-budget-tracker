@@ -15,7 +15,7 @@ const AUDIO_PROCESSING_QUEUE = "audio_processing_queue";
 
 export const AudioService = () => {
 
-    async function storeAudio(params: { filename: string; content: Buffer }): Promise<string> {
+    async function storeAudio(params: { filename: string; content: Buffer }): Promise<{ filePath: string; audioId: string }> {
         logger.info(`[AudioService] Storing audio file.`);
 
         await mkdir(AUDIO_STORAGE_PATH, { recursive: true });
@@ -28,12 +28,12 @@ export const AudioService = () => {
 
         logger.info(`[AudioService] Audio file stored at ${filePath}.`);
 
-        return filePath;
+        return {filePath, audioId};
     }
 
-    async function requestTranscription(filePath: string) {
+    async function requestTranscription(jobId: string, filePath: string) {
         logger.info(`[AudioService] Publishing ${filePath} to queue "${AUDIO_PROCESSING_QUEUE}".`);
-        sendMessage(AUDIO_PROCESSING_QUEUE, filePath);
+        sendMessage(AUDIO_PROCESSING_QUEUE, JSON.stringify({ jobId: jobId, filePath: filePath }));
     }
 
     return {

@@ -174,7 +174,6 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
           id="amount"
           type="number"
           step="0.01"
-          min="0"
           required
           disabled={isProcessing}
           value={amount}

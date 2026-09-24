@@ -41,6 +41,10 @@ source whisper-env/bin/activate
 ```bash
 pip install --upgrade pip
 pip install faster-whisper
+
+# or
+
+pip install -r requirements.txt
 ```
 
 ## 4. Installa le librerie NVIDIA (cuBLAS / cuDNN)

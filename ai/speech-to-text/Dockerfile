@@ -17,7 +17,7 @@ ENV LD_LIBRARY_PATH=/usr/local/lib/python3.12/site-packages/nvidia/cublas/lib:/u
 
 # ---- scarica il modello in fase di build (~500MB), così non lo fa a ogni avvio ----
 ENV HF_HOME=/opt/hf-cache
-RUN python -c "from faster_whisper.utils import download_model; download_model('small')"
+RUN python -c "from faster_whisper.utils import download_model; download_model('large-v3-turbo')"
 
 COPY main.py ./
 COPY src ./src

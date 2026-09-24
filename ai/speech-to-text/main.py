@@ -7,11 +7,19 @@ import json
 def callback(ch, method, properties, body):
     print(f" [x] Received {body}")
 
-    audio_filepath = body.decode("utf-8")
+    try:
+        message = json.loads(body.decode("utf-8"))
+        job_id = message["jobId"]
+        audio_filepath = message["filePath"]
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"Messaggio non valido: {e}")
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        return
 
     if not os.path.exists(audio_filepath):
+        print(f"Audio file non trovato: {audio_filepath}")
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
-        raise FileNotFoundError(f"Audio file non trovato: {audio_filepath}")
+        return
 
     try: 
         print(f"Trascrivo: {audio_filepath}")
@@ -23,7 +31,7 @@ def callback(ch, method, properties, body):
 
     # send transcribed text to another queue
     payload = {
-        "audio_filepath": audio_filepath,
+        "jobId": job_id,
         "text": text,
     }
 

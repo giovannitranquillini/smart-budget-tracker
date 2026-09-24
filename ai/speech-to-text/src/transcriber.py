@@ -8,7 +8,7 @@ def transcribe_audio(file_path):
     print("Load Whisper model...", flush=True)
 
     model = WhisperModel(
-        "small",
+        "large-v3-turbo",
         device="cuda",
         compute_type="int8_float16"
     )
