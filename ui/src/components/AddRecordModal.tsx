@@ -10,7 +10,7 @@ type AddRecordModalProps = {
 
 export default function AddRecordModal({ open, onClose, onCreated }: AddRecordModalProps) {
   return (
-    <Modal open={open} title="Nuovo movimento" onClose={onClose}>
+    <Modal open={open} title="New transaction" onClose={onClose}>
       <RecordForm onSubmitted={onCreated} />
     </Modal>
   )

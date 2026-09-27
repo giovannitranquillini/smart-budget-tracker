@@ -1,10 +1,13 @@
 // src/components/RecordForm.tsx
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import AudioRecorder, { type RecorderStatus } from './AudioRecorder'
-import { createBudgetRecord, listBudgetCategories, uploadBudgetRecordAudio, waitForTranscription } from '../api'
+import { createBudgetRecord, listBudgetCategories, uploadBudgetRecordAudio, waitForBudgetRecord } from '../api'
 import type { BudgetCategory } from '../types'
 
-// Il backend salva il file con l'estensione del nome inviato.
+// How long the confirmation stays visible before the modal closes.
+const SUCCESS_DELAY_MS = 1500
+
+// The backend saves the file with the extension of the submitted filename.
 const extensionFor = (mimeType: string) => {
   if (mimeType.includes('ogg')) return 'ogg'
   if (mimeType.includes('mp4')) return 'mp4'
@@ -47,7 +50,7 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
       .catch((error) => {
         console.error('listBudgetCategories error', error)
 
-        if (!ignore) setSubmitError('Impossibile caricare le categorie.')
+        if (!ignore) setSubmitError('Could not load categories.')
       })
 
     return () => {
@@ -57,13 +60,15 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
 
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
-  const transcriptionRef = useRef<AbortController | null>(null)
+  const budgetRecordRef = useRef<AbortController | null>(null)
+  const successTimeoutRef = useRef<number | undefined>(undefined)
 
-  // Se la modal si chiude: libera il microfono e chiudi lo stream della trascrizione.
+  // When the modal closes: release the microphone, close the SSE stream and cancel the delayed close.
   useEffect(
     () => () => {
       stopTracks(recorderRef.current)
-      transcriptionRef.current?.abort()
+      budgetRecordRef.current?.abort()
+      window.clearTimeout(successTimeoutRef.current)
     },
     []
   )
@@ -86,7 +91,7 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
     } catch (error) {
       console.error('getUserMedia error', error)
 
-      setErrorMessage('Microfono non disponibile: controlla i permessi del browser.')
+      setErrorMessage('Microphone unavailable: check your browser permissions.')
       setStatus('error')
     }
   }
@@ -118,20 +123,21 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
 
       const jobId = await uploadBudgetRecordAudio(audio, `recording.${extensionFor(audio.type)}`)
 
-      const transcription = new AbortController()
-      transcriptionRef.current = transcription
+      const budgetRecord = new AbortController()
+      budgetRecordRef.current = budgetRecord
 
-      const text = await waitForTranscription(jobId, transcription.signal)
+      await waitForBudgetRecord(jobId, budgetRecord.signal)
 
-      setDescription(text)
+      // The backend has already saved the record: show the confirmation, then close and reload the list.
       setStatus('done')
+      successTimeoutRef.current = window.setTimeout(onSubmitted, SUCCESS_DELAY_MS)
     } catch (error) {
-      // Modal chiusa durante l'attesa: il componente non c'è più, niente da mostrare.
-      if (transcriptionRef.current?.signal.aborted) return
+      // Modal closed while waiting: the component is gone, nothing to show.
+      if (budgetRecordRef.current?.signal.aborted) return
 
-      console.error('audio transcription error', error)
+      console.error('audio budget record error', error)
 
-      setErrorMessage('Elaborazione dell’audio non riuscita, riprova.')
+      setErrorMessage('Audio processing failed, please try again.')
       setStatus('error')
     }
   }
@@ -153,7 +159,7 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
     } catch (error) {
       console.error('createBudgetRecord error', error)
 
-      setSubmitError('Salvataggio non riuscito, riprova.')
+      setSubmitError('Save failed, please try again.')
       setIsSubmitting(false)
     }
   }
@@ -167,7 +173,7 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="amount" className="text-xs font-medium text-slate-600">
-          Importo (€)
+          Amount (€)
         </label>
 
         <input
@@ -185,7 +191,7 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="description" className="text-xs font-medium text-slate-600">
-          Descrizione
+          Description
         </label>
 
         <input
@@ -195,14 +201,14 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
           disabled={isProcessing}
           value={description}
           onChange={(event) => setDescription(event.target.value)}
-          placeholder="Spesa al supermercato"
+          placeholder="Grocery shopping"
           className={inputClass}
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="category" className="text-xs font-medium text-slate-600">
-          Categoria
+          Category
         </label>
 
         <select
@@ -213,7 +219,7 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
           onChange={(event) => setCategoryId(event.target.value)}
           className={inputClass}
         >
-          {categories.length === 0 && <option value="">Nessuna categoria disponibile</option>}
+          {categories.length === 0 && <option value="">No categories available</option>}
 
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
@@ -234,7 +240,7 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
         disabled={isProcessing || isSubmitting || !categoryId}
         className="mt-1 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:bg-indigo-300"
       >
-        {isSubmitting ? 'Salvataggio…' : 'Salva movimento'}
+        {isSubmitting ? 'Saving…' : 'Save transaction'}
       </button>
     </form>
   )

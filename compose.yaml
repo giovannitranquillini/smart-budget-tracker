@@ -1,4 +1,11 @@
 services: 
+
+  # Infrastructural Services
+
+  # - Persistence Layer: PostgreSQL
+  # - Message Broker: RabbitMQ
+  # - LLM Service: Ollama
+
   postgres:
     image: postgres:18-alpine
     container_name: postgres
@@ -57,6 +64,11 @@ services:
         condition: service_healthy
     entrypoint: ["sh", "-c", "OLLAMA_HOST=http://ollama:11434 ollama pull qwen2.5:7b"]
     restart: "no"
+
+  # Application Services
+  # - Web Frontend: React.js
+  # - Domain Logic Backend: Node.js
+  # - AI Backend (orchestrator, speech-to-text, llm): Node.js + Python
 
   web: 
     build: ./ui

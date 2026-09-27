@@ -11,11 +11,11 @@ type AudioRecorderProps = {
 }
 
 const LABELS: Record<RecorderStatus, string> = {
-  idle: 'Detta il movimento e lascia che l’AI compili la form',
-  recording: 'Sto ascoltando… premi stop quando hai finito',
-  processing: 'Sto elaborando l’audio…',
-  done: 'Trascrizione pronta: controlla i campi e salva',
-  error: 'Non sono riuscito a leggere l’audio',
+  idle: 'Dictate the transaction and let the AI fill in the form',
+  recording: 'Listening… press stop when you’re done',
+  processing: 'Processing audio…',
+  done: 'Transaction recorded successfully',
+  error: 'Couldn’t read the audio',
 }
 
 export default function AudioRecorder({ status, errorMessage, onToggle }: AudioRecorderProps) {
@@ -25,17 +25,17 @@ export default function AudioRecorder({ status, errorMessage, onToggle }: AudioR
   const isRecording = status === 'recording'
   const isProcessing = status === 'processing'
 
-  // Azzera il contatore all'inizio di ogni nuova registrazione, senza aspettare
-  // il primo tick dell'intervallo.
+  // Reset the counter at the start of each new recording, without waiting
+  // for the first interval tick.
   if (isRecording !== wasRecording) {
     setWasRecording(isRecording)
 
     if (isRecording) setElapsedSeconds(0)
   }
 
-  // Solo feedback visivo: il timer segue lo stato, non il MediaRecorder.
-  // Il contatore riparte da zero a ogni registrazione ed è visibile solo mentre
-  // si registra, quindi non serve resettarlo allo stop.
+  // Visual feedback only: the timer follows the status, not the MediaRecorder.
+  // The counter restarts from zero on each recording and is only visible while
+  // recording, so there is no need to reset it on stop.
   useEffect(() => {
     if (!isRecording) return
 
@@ -66,7 +66,7 @@ export default function AudioRecorder({ status, errorMessage, onToggle }: AudioR
         type="button"
         onClick={onToggle}
         disabled={isProcessing}
-        aria-label={isRecording ? 'Ferma registrazione' : 'Avvia registrazione'}
+        aria-label={isRecording ? 'Stop recording' : 'Start recording'}
         className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition ${buttonClass}`}
       >
         {isProcessing ? (
@@ -88,7 +88,7 @@ export default function AudioRecorder({ status, errorMessage, onToggle }: AudioR
         </span>
 
         <span className="text-xs text-slate-400">
-          {isRecording ? formatTime(elapsedSeconds) : 'Es. «ieri ho speso 12 euro di pizza»'}
+          {isRecording ? formatTime(elapsedSeconds) : 'E.g. “I spent 12 euros on pizza yesterday”'}
         </span>
       </div>
     </div>

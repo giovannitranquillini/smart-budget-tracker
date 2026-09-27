@@ -48,7 +48,7 @@ export default function Modal({ open, title, onClose, children }: ModalProps) {
           <button
             type="button"
             onClick={onClose}
-            aria-label="Chiudi"
+            aria-label="Close"
             className="rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
           >
             <CloseIcon className="h-5 w-5" />

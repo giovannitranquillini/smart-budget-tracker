@@ -1,5 +1,5 @@
 // src/components/ui/icons.tsx
-// Icone inline, così non serve nessuna dipendenza esterna.
+// Inline icons, so no external dependency is needed.
 
 type IconProps = {
   className?: string
@@ -51,6 +51,15 @@ export function GlobeIcon({ className = 'h-5 w-5' }: IconProps) {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className} aria-hidden="true">
       <circle cx="12" cy="12" r="9" />
       <path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z" />
+    </svg>
+  )
+}
+
+export function RefreshIcon({ className = 'h-5 w-5' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <path d="M21 3v6h-6" />
     </svg>
   )
 }

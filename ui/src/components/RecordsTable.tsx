@@ -6,10 +6,10 @@ type RecordsTableProps = {
 }
 
 const formatAmount = (amount: number) =>
-  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(amount)
+  new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'EUR' }).format(amount)
 
 const formatDate = (date: string) =>
-  new Intl.DateTimeFormat('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }).format(
+  new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(
     new Date(date),
   )
 
@@ -20,10 +20,10 @@ export default function RecordsTable({ records }: RecordsTableProps) {
         <table className="w-full min-w-[540px] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50/80">
             <tr className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              <th className="px-5 py-3">Data</th>
-              <th className="px-5 py-3">Descrizione</th>
-              <th className="px-5 py-3">Categoria</th>
-              <th className="px-5 py-3 text-right">Importo</th>
+              <th className="px-5 py-3">Date</th>
+              <th className="px-5 py-3">Description</th>
+              <th className="px-5 py-3">Category</th>
+              <th className="px-5 py-3 text-right">Amount</th>
             </tr>
           </thead>
 
@@ -31,7 +31,7 @@ export default function RecordsTable({ records }: RecordsTableProps) {
             {records.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-5 py-10 text-center text-slate-400">
-                  Nessun movimento registrato.
+                  No transactions recorded yet.
                 </td>
               </tr>
             ) : (
