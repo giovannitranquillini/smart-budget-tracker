@@ -14,7 +14,7 @@ const LABELS: Record<RecorderStatus, string> = {
   idle: 'Dictate the transaction and let the AI fill in the form',
   recording: 'Listening… press stop when you’re done',
   processing: 'Processing audio…',
-  done: 'Transaction recorded successfully',
+  done: 'Form filled in: check the fields and save',
   error: 'Couldn’t read the audio',
 }
 

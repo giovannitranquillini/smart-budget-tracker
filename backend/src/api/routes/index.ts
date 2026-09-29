@@ -5,10 +5,21 @@ import { CreateBudgetCategoryInput, CreateBudgetRecordFromAudioInput, CreateBudg
 import { BudgetService } from '@core/services/budget.service.js';
 import { AudioService } from '@core/services/audio.service.js';
 
-const budgetService = BudgetService();
-const audioService = AudioService();
+type serviceDeps = {
+  budgetService: ReturnType<typeof BudgetService>;
+  audioService: ReturnType<typeof AudioService>;
+};
 
-export const registerRoutes = (server: FastifyInstance) => {
+/**
+ * The registerRoutes function sets up the necessary API routes on the Fastify server.
+ */
+export const registerRoutes = (server: FastifyInstance, deps: serviceDeps) => {
+
+  /**
+   * Trigger a new audio processing that will lead to a budget record draft creation. 
+   * The audio file is stored and a transcription request is initiated via RabbitMQ. 
+   * The client can listen for events related to the draft creation using the provided jobId (Server-sent events, SSE).
+   */
   server.post('/budget/record/audio', {schema: CreateBudgetRecordFromAudioInput}, async (request, reply) => {
     try {
       logger.info(`[API] Receiving audio file for a new budget record.`);
@@ -20,11 +31,14 @@ export const registerRoutes = (server: FastifyInstance) => {
         return reply.status(400).send({ error: 'No audio file provided' });
       }
 
+      // File storage
       const content = await audio.toBuffer();
-      const { filePath, audioId } = await audioService.storeAudio({ filename: audio.filename, content });
+      const { filePath, audioId } = await deps.audioService.storeAudio({ filename: audio.filename, content });
 
-      await audioService.requestTranscription(audioId, filePath);
+      // Transcription request via RabbitMQ
+      await deps.audioService.requestTranscription(audioId, filePath);
 
+      // On this jobId the client can listen for events
       reply.status(202).send({ jobId: audioId });
     } catch (error) {
       logger.error(`[API] Error processing audio file: ${error}`);
@@ -32,10 +46,49 @@ export const registerRoutes = (server: FastifyInstance) => {
     }
   });
 
+  /**
+   * Server-sent events (SSE) endpoint to stream budget record drafts related to a specific audio processing job.
+   * 
+   * - The client can listen for events related to the draft creation using the provided jobId.
+   * - The server will send events whenever a new draft is created for the given jobId.
+   * - The connection will remain open until the client closes it or the server decides to close it.
+   */
+  server.get('/budget/record/audio/:jobId/events', (request, reply) => {
+
+    const { jobId } = request.params as { jobId: string }; // former audioId
+    logger.info(`[API] Opening SSE stream for job ${jobId}.`);
+
+    reply.hijack(); // it tells Fastify that the response will be handled manually
+
+    // Set headers for SSE
+    for (const [name, value] of Object.entries(reply.getHeaders())) {
+      if (value !== undefined) reply.raw.setHeader(name, value);
+    }
+
+    // Inform the client that this is an SSE stream and keep the connection alive
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream', // MIME type for SSE
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    });
+
+    const unsubscribe = deps.budgetService.subscribeToDraft(jobId, (draft) => {
+      reply.raw.write(`event: budget-record\ndata: ${JSON.stringify(draft)}\n\n`);
+      reply.raw.end();
+    });
+
+    // Connection could be closed by the client and server
+    reply.raw.on('close', unsubscribe);
+  });
+
+  /**
+   * Create a new budget record.
+   * Receives a JSON payload with the budget record details and stores it in the database.
+   */
   server.post('/budget/record', {schema: CreateBudgetRecordInput}, async (request, reply) => {
     try {
       logger.info(`[API] Creating new budget record.`);
-      await budgetService.createBudgetRecord(request.body as any);
+      await deps.budgetService.createBudgetRecord(request.body as any);
       reply.status(201).send();
     } catch (error) {
       logger.error(`[API] Error creating budget record: ${error}`);
@@ -43,10 +96,13 @@ export const registerRoutes = (server: FastifyInstance) => {
     }
   });
 
+  /**
+   * List all budget records.
+   */
   server.get('/budget/record', async (request, reply) => {
     try {
       logger.info(`[API] Fetching budget records.`);
-      const records = await budgetService.listBudgetRecord();
+      const records = await deps.budgetService.listBudgetRecord();
       reply.send(records);
     } catch (error) {
       logger.error(`[API] Error fetching budget records: ${error}`);
@@ -54,10 +110,14 @@ export const registerRoutes = (server: FastifyInstance) => {
     }
   });
 
+  /**
+   * Create a new budget category.
+   * Receives a JSON payload with the budget category details and stores it in the database.
+   */
   server.post('/budget/category', {schema: CreateBudgetCategoryInput}, async (request, reply) => {
     try {
       logger.info(`[API] Creating new budget category.`);
-      await budgetService.createBudgetCategory(request.body as any);
+      await deps.budgetService.createBudgetCategory(request.body as any);
       reply.status(201).send();
     } catch (error) {
       logger.error(`[API] Error creating budget category: ${error}`);
@@ -65,41 +125,17 @@ export const registerRoutes = (server: FastifyInstance) => {
     }
   });
 
+  /**
+   * List all budget categories.
+   */
   server.get('/budget/category', async (request, reply) => {
     try {
       logger.info(`[API] Fetching budget categories.`);
-      const categories = await budgetService.listBudgetCategory();
+      const categories = await deps.budgetService.listBudgetCategory();
       reply.send(categories);
     } catch (error) {
       logger.error(`[API] Error fetching budget categories: ${error}`);
       reply.status(500).send({ error: 'Failed to fetch budget categories' });
     }
-  });
-
-  server.get('/budget/record/audio/:jobId/events', (request, reply) => {
-    const { jobId } = request.params as { jobId: string };
-    logger.info(`[API] Opening SSE stream for job ${jobId}.`);
-
-    // Gestiamo noi la risposta raw: Fastify non deve chiuderla né serializzarla
-    reply.hijack();
-
-    // Copia sulla risposta raw gli header già impostati da Fastify (es. CORS)
-    for (const [name, value] of Object.entries(reply.getHeaders())) {
-      if (value !== undefined) reply.raw.setHeader(name, value);
-    }
-
-    reply.raw.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    });
-
-    const unsubscribe = budgetService.subscribeToDraft(jobId, (draft) => {
-      reply.raw.write(`event: budget-record\ndata: ${JSON.stringify(draft)}\n\n`);
-      reply.raw.end();
-    });
-
-    // Client disconnesso (modal chiusa, timeout, tab chiusa) oppure risposta terminata
-    reply.raw.on('close', unsubscribe);
   });
 }

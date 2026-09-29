@@ -2,10 +2,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import AudioRecorder, { type RecorderStatus } from './AudioRecorder'
 import { createBudgetRecord, listBudgetCategories, uploadBudgetRecordAudio, waitForBudgetRecord } from '../api'
-import type { BudgetCategory } from '../types'
-
-// How long the confirmation stays visible before the modal closes.
-const SUCCESS_DELAY_MS = 1500
+import type { BudgetCategory, BudgetRecordDraft } from '../types'
 
 // The backend saves the file with the extension of the submitted filename.
 const extensionFor = (mimeType: string) => {
@@ -61,14 +58,12 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const budgetRecordRef = useRef<AbortController | null>(null)
-  const successTimeoutRef = useRef<number | undefined>(undefined)
 
-  // When the modal closes: release the microphone, close the SSE stream and cancel the delayed close.
+  // When the modal closes: release the microphone and close the SSE stream.
   useEffect(
     () => () => {
       stopTracks(recorderRef.current)
       budgetRecordRef.current?.abort()
-      window.clearTimeout(successTimeoutRef.current)
     },
     []
   )
@@ -111,6 +106,15 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
       recorder.stop()
     })
 
+  const fillFromDraft = (draft: BudgetRecordDraft) => {
+    setAmount(String(draft.amount))
+    setDescription(draft.description)
+
+    // The AI returns the category name, the select works with ids.
+    const category = categories.find((item) => item.name.toLowerCase() === draft.category.toLowerCase())
+    if (category) setCategoryId(category.id)
+  }
+
   const handleRecorderToggle = async () => {
     if (status !== 'recording') return startRecording()
 
@@ -126,11 +130,11 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
       const budgetRecord = new AbortController()
       budgetRecordRef.current = budgetRecord
 
-      await waitForBudgetRecord(jobId, budgetRecord.signal)
+      const draft = await waitForBudgetRecord(jobId, budgetRecord.signal)
 
-      // The backend has already saved the record: show the confirmation, then close and reload the list.
+      // The draft is only a proposal: fill in the form and let the user review and save it.
+      fillFromDraft(draft)
       setStatus('done')
-      successTimeoutRef.current = window.setTimeout(onSubmitted, SUCCESS_DELAY_MS)
     } catch (error) {
       // Modal closed while waiting: the component is gone, nothing to show.
       if (budgetRecordRef.current?.signal.aborted) return

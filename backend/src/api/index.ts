@@ -5,17 +5,21 @@ import multipart from '@fastify/multipart';
 import cors from '@fastify/cors';
 
 import { registerRoutes } from '@api/routes/index.js'
+import { BudgetService } from '@core/services/budget.service.js';
+import { registerConsumers } from './consumers/index.js';
+import { AudioService } from '@core/services/audio.service.js';
 
 const server = fastify()
 
+// CORS configuration
 await server.register(cors, {
   origin: true
 });
 
-// needed by POST /budget/record/audio: the UI sends the recording as multipart/form-data
+// File uploads (multipart/form-data)
 await server.register(multipart, {
   limits: {
-    fileSize: 25 * 1024 * 1024
+    fileSize: 25 * 1024 * 1024 // 25 MB
   }
 });
 
@@ -40,9 +44,13 @@ await server.register(swaggerUi, {
   routePrefix: '/docs'
 });
 
-registerRoutes(server)
+const budgetService = BudgetService();
+const audioService = AudioService();
 
-// host 0.0.0.0: inside the container loopback is not reachable from the host port mapping
+registerRoutes(server, {budgetService, audioService});
+registerConsumers({ budgetService });
+
+// 0.0.0.0 to be reachable from outside the Docker container
 server.listen({ port: 3001, host: '0.0.0.0' }, (err, address) => {
   if (err) {
     console.error(err)

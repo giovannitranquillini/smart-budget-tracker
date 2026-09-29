@@ -12,47 +12,43 @@ export type BudgetRecordDraft = {
 };
 
 // How long we keep a draft that arrived before the UI opened the SSE stream
-const DRAFT_TTL_MS = 60_000;
+const DRAFT_TTL_MS = 60_000; // 1 minute
 
 // Module level: shared by every BudgetService instance
 const draftListeners = new Map<string, (draft: BudgetRecordDraft) => void>();
 const earlyDrafts = new Map<string, BudgetRecordDraft>();
 
+/**
+ * The BudgetService is responsible for handling budget records and categories domain logic. 
+ * 
+ * - Basic CRUD operations for budget records and categories are provided.
+ * - It listens for budget record drafts from the audio processing service via RabbitMQ, 
+ * and provides methods to create and list budget records and categories.
+ */
 export const BudgetService = () => {
     
-    readMessage('budget_record', async (msg: any) => {
-        logger.info(`[BudgetService] Received budget record: ${msg}`);
-
-        try {
-            const json = JSON.parse(msg);
-
-            const jobId = json.jobId;
-            const budgetRecord: BudgetRecordDraft = json.budgetRecord;
-
-            if(!budgetRecord.amount || !budgetRecord.category || !budgetRecord.description) {
-                logger.warn(`[BudgetService] Incomplete budget record received: ${JSON.stringify(budgetRecord)}`);
-                return;
-            }
-
-            // hand the draft to the UI waiting on the SSE stream of this job
-            notifyDraft(jobId, budgetRecord);
-
-            // find the category id by name
-            const categoryRecord = await prisma.budgetCategory.findUnique({ where: { name: budgetRecord.category } });
-
-            if (!categoryRecord) {
-                logger.error(`[BudgetService] Category "${budgetRecord.category}" not found.`);
-                return;
-            }
-
-            await createBudgetRecord({ amount: budgetRecord.amount, description: budgetRecord.description, categoryId: categoryRecord.id });
-    
-        } catch (error) {
-            logger.error(`[BudgetService] Error processing budget record: ${error}`);
+    /**
+     * Handles an extracted budget record draft from the audio processing service.
+     * 
+     * @param jobId The jobId of the audio processing that will lead to a budget record draft creation.
+     * @param draft The budget record draft to handle.
+     * 
+     * @returns A promise resolving when the draft is handled.
+     */
+    async function handleExtractedDraft(jobId: string, draft: BudgetRecordDraft) {
+        if (!draft.amount || !draft.category || !draft.description) {
+            logger.warn(`[BudgetService] Incomplete budget record received: ${JSON.stringify(draft)}`);
+            return;
         }
-    });
 
-    function notifyDraft(jobId: string, draft: BudgetRecordDraft) {
+        const categoryRecord = await prisma.budgetCategory.findUnique({ where: { name: draft.category } });
+
+        if (!categoryRecord) {
+            logger.error(`[BudgetService] Category "${draft.category}" not found.`);
+            return;
+        }
+
+        // notify clients that a new draft is available for the given jobId
         const listener = draftListeners.get(jobId);
         if (listener) return listener(draft);
 
@@ -61,9 +57,18 @@ export const BudgetService = () => {
         setTimeout(() => earlyDrafts.delete(jobId), DRAFT_TTL_MS);
     }
 
-    /** Registers who is waiting for the draft of jobId. Returns the function to stop listening. */
+    /** 
+     * Registers who is waiting for the draft of jobId. 
+     * Returns the function to stop listening. 
+     * 
+     * @param jobId The jobId of the audio processing that will lead to a budget record draft creation.
+     * @param listener The function to call when a draft is available.
+     * 
+     * @returns A function to stop listening for drafts.
+     */
     function subscribeToDraft(jobId: string, listener: (draft: BudgetRecordDraft) => void): () => void {
         const ready = earlyDrafts.get(jobId);
+
         if (ready !== undefined) {
             earlyDrafts.delete(jobId);
             listener(ready);
@@ -109,6 +114,7 @@ export const BudgetService = () => {
         listBudgetCategory,
         createBudgetRecord,
         listBudgetRecord,
-        subscribeToDraft
+        subscribeToDraft,
+        handleExtractedDraft
     }
 }

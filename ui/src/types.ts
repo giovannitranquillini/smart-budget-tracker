@@ -13,7 +13,7 @@ export type BudgetCategory = {
   name: string
 }
 
-/** Draft record extracted by the AI from audio and already saved by the backend (SSE event `budget-record`). */
+/** Draft record extracted by the AI from audio, used to fill in the form (SSE event `budget-record`). */
 export type BudgetRecordDraft = {
   amount: number
   category: string
