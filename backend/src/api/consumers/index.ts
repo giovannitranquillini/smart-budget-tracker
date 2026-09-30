@@ -17,7 +17,7 @@ export const registerConsumers = (deps: serviceDeps) => {
     readMessage('budget_record', async (msg) => {
         try {
             const { jobId, budgetRecord } = JSON.parse(msg);
-            await deps.budgetService.handleExtractedDraft(jobId, budgetRecord);
+            await deps.budgetService.handleDraft(jobId, budgetRecord);
         } catch (error) {
             logger.error(`[Consumer] Error processing budget record: ${error}`);
         }

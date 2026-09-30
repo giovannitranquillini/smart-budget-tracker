@@ -72,12 +72,13 @@ export const registerRoutes = (server: FastifyInstance, deps: serviceDeps) => {
       Connection: 'keep-alive',
     });
 
-    const unsubscribe = deps.budgetService.subscribeToDraft(jobId, (draft) => {
+    // Subscribe to the jobId to listen for budget record drafts
+    const unsubscribe = deps.budgetService.subscribeToJob(jobId, (draft) => {
       reply.raw.write(`event: budget-record\ndata: ${JSON.stringify(draft)}\n\n`);
       reply.raw.end();
     });
 
-    // Connection could be closed by the client and server
+    // Handle client disconnection and clean up
     reply.raw.on('close', unsubscribe);
   });
 
