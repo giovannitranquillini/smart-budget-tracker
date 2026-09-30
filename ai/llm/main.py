@@ -7,10 +7,10 @@ import json
 def callback(ch, method, properties, body):
     print(f" [x] Received {body}")
 
-    # Decodifica il messaggio JSON
+    # Decode the JSON message
     incoming_payload = json.loads(body.decode('utf-8'))
 
-    # manda il tutto al llm per la generazione del nuovo record
+    # send everything to the LLM to generate the new record
     budget_record = execute_llm(incoming_payload['prompt'], incoming_payload['text'])
 
     payload = {
@@ -18,19 +18,19 @@ def callback(ch, method, properties, body):
         "budgetRecord": budget_record,
     }
 
-    # Invia la trascrizione sull'altra coda
+    # Publish the budget record on the other queue
     ch.basic_publish(
-        exchange='',                 # default exchange: routing_key = nome della coda
+        exchange='',                 # default exchange: routing_key = queue name
         routing_key='llm_processed',
         body=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
         properties=pika.BasicProperties(
             content_type='application/json',
-            delivery_mode=2,         # messaggio persistente
-            correlation_id=properties.correlation_id,  # propaga l'ID se l'API lo manda
+            delivery_mode=2,         # persistent message
+            correlation_id=properties.correlation_id,  # propagate the ID if the API sends it
         ),
     )
 
-    # Ack solo dopo aver pubblicato il risultato
+    # Ack only after the result has been published
     ch.basic_ack(delivery_tag=method.delivery_tag)
     print(f" [x] Nuovo budget record generato")
 

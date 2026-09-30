@@ -102,12 +102,15 @@ services:
     container_name: ai-backend
     environment:
       RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672/
+      BACKEND_URL: http://backend:3001
     ports:
       - "3002:3002"
       - "50051:50051"
     depends_on:
       rabbitmq:
         condition: service_healthy
+      backend:
+        condition: service_started
 
   speech-to-text:
     build: ./ai/speech-to-text

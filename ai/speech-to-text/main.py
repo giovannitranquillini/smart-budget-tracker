@@ -35,19 +35,19 @@ def callback(ch, method, properties, body):
         "text": text,
     }
 
-    # Invia la trascrizione sull'altra coda
+    # Publish the transcription on the other queue
     ch.basic_publish(
-        exchange='',                 # default exchange: routing_key = nome della coda
+        exchange='',                 # default exchange: routing_key = queue name
         routing_key='transcriptions',
         body=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
         properties=pika.BasicProperties(
             content_type='application/json',
-            delivery_mode=2,         # messaggio persistente
-            correlation_id=properties.correlation_id,  # propaga l'ID se l'API lo manda
+            delivery_mode=2,         # persistent message
+            correlation_id=properties.correlation_id,  # propagate the ID if the API sends it
         ),
     )
 
-    # Ack solo dopo aver pubblicato il risultato
+    # Ack only after the result has been published
     ch.basic_ack(delivery_tag=method.delivery_tag)
     print(f" [x] Trascrizione inviata su 'transcriptions'")
 

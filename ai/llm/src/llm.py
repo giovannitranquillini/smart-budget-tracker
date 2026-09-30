@@ -8,16 +8,12 @@ OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2')
  
  
 def execute_llm(prompt: str, text: str) -> dict:
-    """
-    Chiama il modello Ollama locale chiedendo di applicare `prompt` su `text`
-    e di rispondere solo con un oggetto JSON. Ritorna il JSON già parsato
-    come dict (pronto per essere usato come record).
-    """
+
     full_prompt = (
         f"{prompt}\n\n"
-        "Rispondi SOLO con un oggetto JSON valido, senza testo aggiuntivo "
-        "e senza markdown.\n\n"
-        f"Testo:\n\"\"\"{text}\"\"\""
+        "Answer ONLY with a valid JSON object, with no extra text "
+        "and no markdown.\n\n"
+        f"Text:\n\"\"\"{text}\"\"\""
     )
  
     response = requests.post(
@@ -25,7 +21,7 @@ def execute_llm(prompt: str, text: str) -> dict:
         json={
             "model": OLLAMA_MODEL,
             "prompt": full_prompt,
-            "format": "json",   # forza Ollama a produrre JSON sintatticamente valido
+            "format": "json",   # forces Ollama to produce syntactically valid JSON
             "stream": False,
         },
         timeout=60,
