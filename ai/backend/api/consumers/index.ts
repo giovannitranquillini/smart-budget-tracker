@@ -20,24 +20,24 @@ async function fetchCategories(): Promise<string[]> {
 const registerConsumers = () => {
 
   /**
-   * Consumer for the 'audio_processing' queue. 
+   * Consumer for the 'audio.processing' queue. 
    * 
    * It listens for messages containing audio file paths 
-   * to process and forwards them to the 'speech_to_text' queue.
+   * to process and forwards them to the 'speech_to_text.processing' queue.
    */
-  readMessage('audio_processing', (msg: any) => {
+  readMessage({ queue: 'audio.processing' }, (msg: any) => {
     console.log(`1. Received audio filepath to process: ${msg}`);
 
-    sendMessage('speech_to_text', msg);
+    sendMessage('speech_to_text.processing', msg);
   });
 
   /**
-   * Consumer for the 'transcriptions' queue.
+   * Consumer for the 'audio.processed' queue.
    * 
    * It listens for messages containing transcribed text from audio files, 
-   * builds a prompt for the LLM, and forwards it to the 'llm_to_budgeting' queue.
+   * builds a prompt for the LLM, and forwards it to the 'llm.processing' queue.
    */
-  readMessage('transcriptions', async (msg: any) => {
+  readMessage({ queue: 'audio.processed', exchange: 'pipeline', binding: 'audio.processed' }, async (msg: any) => {
     console.log(`2. Received transcription: ${msg}`);
 
     try {
@@ -49,22 +49,22 @@ const registerConsumers = () => {
         prompt: buildPromptForTranscription(json.text.join(" "), await fetchCategories())
       };
 
-      sendMessage('llm_to_budgeting', JSON.stringify(jsonPayload));
+      sendMessage('llm.processing', JSON.stringify(jsonPayload));
     } catch (error) {
       console.error(`Error processing transcription: ${error}`);
     }
   });
 
   /**
-   * Consumer for the 'llm_processed' queue.
+   * Consumer for the 'llm.processed' queue.
    * 
    * It listens for messages containing processed output from the LLM 
-   * and forwards them to the 'budget_record' queue on the domain logic backend
+   * and forwards them to the 'budget_record.processed' queue on the domain logic backend
    */
-  readMessage('llm_processed', (msg: any) => {
+  readMessage({ queue: 'llm.processed', exchange: 'pipeline', binding: 'llm.processed' }, (msg: any) => {
     console.log(`3. Received processed LLM output: ${msg}`);
 
-    sendMessage('budget_record', msg);
+    sendMessage('budget_record.processed', msg);
   });
 }
 

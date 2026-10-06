@@ -88,7 +88,7 @@ services:
     ports:
       - "3001:3001"
     volumes:
-      - ./audio_files:/audio_files
+      - audio_files:/audio_files
     depends_on:
       postgres:
         condition: service_started
@@ -119,7 +119,7 @@ services:
       RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672/
       AUDIO_STORAGE_PATH: /audio_files
     volumes:
-      - ./audio_files:/audio_files
+      - audio_files:/audio_files
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -148,4 +148,5 @@ volumes:
   postgres_data:
   rabbitmq_data:
   ollama_data:
+  audio_files:
 

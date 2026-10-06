@@ -143,5 +143,4 @@ vite.config.ts.timestamp-*
 .vite/
 
 # Uploaded / recorded audio
-audio_files/*
-!audio_files/.gitkeep
+audio_files/

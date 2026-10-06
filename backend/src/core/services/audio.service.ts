@@ -11,7 +11,7 @@ const AUDIO_STORAGE_PATH = path.resolve(
     process.env.AUDIO_STORAGE_PATH || path.join(process.cwd(), "..", "audio_files")
 );
 
-const AUDIO_PROCESSING_QUEUE = "audio_processing";
+const AUDIO_PROCESSING_QUEUE = "audio.processing";
 
 /**
  * AudioService is a collection of function handling all the audio processing related tasks.

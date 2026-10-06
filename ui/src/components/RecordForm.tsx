@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import AudioRecorder, { type RecorderStatus } from './AudioRecorder'
 import { createBudgetRecord, listBudgetCategories, uploadBudgetRecordAudio, waitForBudgetRecord } from '../api'
-import type { BudgetCategory, BudgetRecordDraft } from '../types'
+import type { BudgetCategory, BudgetRecordDraft, PipelineStage } from '../types'
 
 // The backend saves the file with the extension of the submitted filename.
 const extensionFor = (mimeType: string) => {
@@ -28,6 +28,8 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
 
   const [status, setStatus] = useState<RecorderStatus>('idle')
   const [errorMessage, setErrorMessage] = useState('')
+  // Last completed stage of the AI pipeline, null while the audio has only been uploaded.
+  const [stage, setStage] = useState<PipelineStage | null>(null)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -119,6 +121,7 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
     if (status !== 'recording') return startRecording()
 
     setStatus('processing')
+    setStage(null)
 
     try {
       const audio = await stopRecording()
@@ -130,7 +133,7 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
       const budgetRecord = new AbortController()
       budgetRecordRef.current = budgetRecord
 
-      const draft = await waitForBudgetRecord(jobId, budgetRecord.signal)
+      const draft = await waitForBudgetRecord(jobId, budgetRecord.signal, setStage)
 
       // The draft is only a proposal: fill in the form and let the user review and save it.
       fillFromDraft(draft)
@@ -173,7 +176,7 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <AudioRecorder status={status} errorMessage={errorMessage} onToggle={handleRecorderToggle} />
+      <AudioRecorder status={status} stage={stage} errorMessage={errorMessage} onToggle={handleRecorderToggle} />
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="amount" className="text-xs font-medium text-slate-600">

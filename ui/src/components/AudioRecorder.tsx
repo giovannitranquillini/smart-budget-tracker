@@ -1,13 +1,22 @@
 // src/components/AudioRecorder.tsx
 import { useEffect, useState } from 'react'
 import { MicIcon, StopIcon } from './ui/icons'
+import type { PipelineStage } from '../types'
 
 export type RecorderStatus = 'idle' | 'recording' | 'processing' | 'done' | 'error'
 
 type AudioRecorderProps = {
   status: RecorderStatus
+  stage: PipelineStage | null
   errorMessage?: string
   onToggle: () => void
+}
+
+// Progress dot shown while processing: `uploaded` until the first pipeline stage is completed.
+const STAGE_DOTS: Record<PipelineStage | 'uploaded', { color: string; label: string }> = {
+  uploaded: { color: 'bg-slate-300', label: 'Audio uploaded' },
+  'audio.processed': { color: 'bg-amber-400', label: 'Audio transcribed' },
+  'llm.processed': { color: 'bg-emerald-500', label: 'Transaction extracted' },
 }
 
 const LABELS: Record<RecorderStatus, string> = {
@@ -18,7 +27,7 @@ const LABELS: Record<RecorderStatus, string> = {
   error: 'Couldn’t read the audio',
 }
 
-export default function AudioRecorder({ status, errorMessage, onToggle }: AudioRecorderProps) {
+export default function AudioRecorder({ status, stage, errorMessage, onToggle }: AudioRecorderProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [wasRecording, setWasRecording] = useState(false)
 
@@ -56,6 +65,8 @@ export default function AudioRecorder({ status, errorMessage, onToggle }: AudioR
     return `${String(minutes).padStart(2, '0')}:${String(rest).padStart(2, '0')}`
   }
 
+  const stageDot = STAGE_DOTS[stage ?? 'uploaded']
+
   const buttonClass = isRecording
     ? 'animate-pulse bg-red-500 hover:bg-red-600'
     : 'bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300'
@@ -87,9 +98,16 @@ export default function AudioRecorder({ status, errorMessage, onToggle }: AudioR
           {status === 'error' && errorMessage ? errorMessage : LABELS[status]}
         </span>
 
-        <span className="text-xs text-slate-400">
-          {isRecording ? formatTime(elapsedSeconds) : 'E.g. “I spent 12 euros on pizza yesterday”'}
-        </span>
+        {isProcessing ? (
+          <span role="status" className="flex items-center gap-1.5 text-xs text-slate-500">
+            <span className={`h-2.5 w-2.5 rounded-full transition-colors ${stageDot.color}`} />
+            {stageDot.label}
+          </span>
+        ) : (
+          <span className="text-xs text-slate-400">
+            {isRecording ? formatTime(elapsedSeconds) : 'E.g. “I spent 12 euros on pizza yesterday”'}
+          </span>
+        )}
       </div>
     </div>
   )

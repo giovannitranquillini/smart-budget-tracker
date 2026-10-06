@@ -22,16 +22,26 @@ function sendMessage(queue: string, message: string) {
 
 /**
  * Reads a message from the specified queue.
- * @param queue The name of the queue to read from.
- * @param callback The function to call when a message is received.
+ * @param settings.queue The name of the queue to read from.
+ * @param settings.exchange The exchange to bind the queue to.
+ * @param settings.binding The binding key used to bind the queue to the exchange.
+ * @param callback The function to call when a message is received. It also receives the routing key
+ * the message was published with (e.g. "audio.processed"), useful when the binding uses wildcards.
  */
-function readMessage(queue: string, callback: (msg: string) => void) {
-  
+function readMessage(settings: { queue: string; exchange?: string; binding?: string }, callback: (msg: string, routingKey: string) => void) {
+
+  const { queue, exchange, binding } = settings;
+
   channel.assertQueue(queue, { durable: true }); // assert the queue exists, if not it will be created
+
+  if(exchange && binding) {
+    channel.assertExchange(exchange, 'topic', { durable: true }); // assert the exchange exists, if not it will be created
+    channel.bindQueue(queue, exchange, binding); // bind the queue to the exchange
+  }
 
   channel.consume(queue, (msg) => {
     if (msg !== null) {
-      callback(msg.content.toString());
+      callback(msg.content.toString(), msg.fields.routingKey);
       channel.ack(msg);
     }
   });

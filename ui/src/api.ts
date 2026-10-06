@@ -1,5 +1,5 @@
 // src/api.ts
-import type { BudgetCategory, BudgetRecord, BudgetRecordDraft, NewBudgetRecord } from './types'
+import type { BudgetCategory, BudgetRecord, BudgetRecordDraft, NewBudgetRecord, PipelineStage } from './types'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
@@ -66,8 +66,13 @@ const BUDGET_RECORD_TIMEOUT_MS = 60_000
 /**
  * Opens an SSE stream and resolves with the record as soon as the backend has extracted it from the audio.
  * `signal` closes the stream, e.g. when the modal is closed.
+ * `onStage` is called each time a stage of the AI pipeline is completed.
  */
-export const waitForBudgetRecord = (jobId: string, signal?: AbortSignal): Promise<BudgetRecordDraft> =>
+export const waitForBudgetRecord = (
+  jobId: string,
+  signal?: AbortSignal,
+  onStage?: (stage: PipelineStage) => void
+): Promise<BudgetRecordDraft> =>
   new Promise((resolve, reject) => {
     const source = new EventSource(`${API_URL}/budget/record/audio/${jobId}/events`)
 
@@ -81,6 +86,11 @@ export const waitForBudgetRecord = (jobId: string, signal?: AbortSignal): Promis
       clearTimeout(timeout)
       source.close()
     }
+
+    source.addEventListener('stage', (event) => {
+      const { stage }: { stage: PipelineStage } = JSON.parse((event as MessageEvent<string>).data)
+      onStage?.(stage)
+    })
 
     source.addEventListener('budget-record', (event) => {
       close()

@@ -72,10 +72,17 @@ export const registerRoutes = (server: FastifyInstance, deps: serviceDeps) => {
       Connection: 'keep-alive',
     });
 
-    // Subscribe to the jobId to listen for budget record drafts
-    const unsubscribe = deps.budgetService.subscribeToJob(jobId, (draft) => {
-      reply.raw.write(`event: budget-record\ndata: ${JSON.stringify(draft)}\n\n`);
-      reply.raw.end();
+    // Subscribe to the jobId to listen for pipeline progress and budget record drafts
+    const unsubscribe = deps.budgetService.subscribeToJob(jobId, {
+      onStage: (stage) => {
+        // a late stage event can arrive after the draft has already closed the stream
+        if (reply.raw.writableEnded) return;
+        reply.raw.write(`event: stage\ndata: ${JSON.stringify({ stage })}\n\n`);
+      },
+      onDraft: (draft) => {
+        reply.raw.write(`event: budget-record\ndata: ${JSON.stringify(draft)}\n\n`);
+        reply.raw.end();
+      }
     });
 
     // Handle client disconnection and clean up

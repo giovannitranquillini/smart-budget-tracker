@@ -18,10 +18,11 @@ def callback(ch, method, properties, body):
         "budgetRecord": budget_record,
     }
 
-    # Publish the budget record on the other queue
+    # Publish the budget record on the pipeline exchange: it is routed to every queue
+    # bound to 'llm.processed' (the next step and the progress notifications)
     ch.basic_publish(
-        exchange='',                 # default exchange: routing_key = queue name
-        routing_key='llm_processed',
+        exchange='pipeline',
+        routing_key='llm.processed',
         body=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
         properties=pika.BasicProperties(
             content_type='application/json',
@@ -46,13 +47,15 @@ def main():
     connection = pika.BlockingConnection(pika.URLParameters(connection_url))
     channel = connection.channel()
 
+    channel.exchange_declare(exchange='pipeline', exchange_type='topic', durable=True)
+
     channel.queue_declare(
-        queue='llm_to_budgeting',
+        queue='llm.processing',
         durable=True
     )
 
     channel.basic_consume(
-        queue='llm_to_budgeting', 
+        queue='llm.processing', 
         on_message_callback=callback, 
         auto_ack=False
     )

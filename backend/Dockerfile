@@ -29,6 +29,7 @@ FROM base AS runner
 ENV NODE_ENV=production
 COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
+RUN mkdir -p /audio_files && chown node:node /audio_files
 USER node
 EXPOSE 3001
 CMD ["node", "dist/src/api/index.js"]

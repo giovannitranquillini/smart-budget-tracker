@@ -10,11 +10,20 @@ export type BudgetRecordDraft = {
     description: string | null;
 };
 
+/** Completed stage of the AI pipeline, named after the routing key of its event on the "pipeline" exchange. */
+export type PipelineStage = "audio.processed" | "llm.processed";
+
+/** Who is waiting for the updates of a job (the SSE stream opened by the UI). */
+export type JobListener = {
+    onStage: (stage: PipelineStage) => void;
+    onDraft: (draft: BudgetRecordDraft) => void;
+};
+
 // How long we keep a draft that arrived before the UI opened the SSE stream
 const DRAFT_TTL_MS = 60_000; // 1 minute
 
 // Module level: shared by every BudgetService instance
-const sseConnections = new Map<string, (draft: BudgetRecordDraft) => void>(); // SSE connections
+const sseConnections = new Map<string, JobListener>(); // SSE connections
 const drafts = new Map<string, BudgetRecordDraft>(); // drafts that arrived before the UI opened the SSE stream
 
 /**
@@ -31,21 +40,33 @@ export const BudgetService = () => {
      * Returns the function to stop listening. 
      * 
      * @param jobId The jobId of the audio processing that will lead to a budget record draft creation.
-     * @param listener The function to call when a draft is available.
-     * 
+     * @param listener The functions to call when a pipeline stage is completed and when the draft is available.
+     *
      * @returns A function to stop listening for drafts.
      */
-    function subscribeToJob(jobId: string, listener: (draft: BudgetRecordDraft) => void): () => void {
+    function subscribeToJob(jobId: string, listener: JobListener): () => void {
         const ready = drafts.get(jobId);
 
         if (ready !== undefined) {
             drafts.delete(jobId);
-            listener(ready);
+            listener.onDraft(ready); // immediately notify the draft is ready
             return () => {};
         }
 
-        sseConnections.set(jobId, listener);
+        sseConnections.set(jobId, listener); // register the listener for future notifications
         return () => sseConnections.delete(jobId); // unsubscribe function on client disconnection
+    }
+
+    /**
+     * Notifies the client listening on the jobId SSE stream that a pipeline stage is completed.
+     * Stages completed before the client opened the stream are not kept: the draft is what matters.
+     *
+     * @param jobId The jobId of the audio processing.
+     * @param stage The completed pipeline stage.
+     */
+    function handleStage(jobId: string, stage: PipelineStage) {
+        logger.info(`[BudgetService] Job ${jobId}: stage "${stage}" completed.`);
+        sseConnections.get(jobId)?.onStage(stage);
     }
 
     /**
@@ -71,7 +92,7 @@ export const BudgetService = () => {
 
         // notify clients that a new draft is available for the given jobId
         const listener = sseConnections.get(jobId);
-        if (listener) return listener(draft);
+        if (listener) return listener.onDraft(draft);
 
         // nobody listening (yet): keep it for a while
         drafts.set(jobId, draft);
@@ -123,6 +144,7 @@ export const BudgetService = () => {
         createBudgetRecord,
         listBudgetRecord,
         subscribeToJob,
+        handleStage,
         handleDraft
     }
 }

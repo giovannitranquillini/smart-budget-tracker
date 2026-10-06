@@ -22,4 +22,6 @@ RUN python -c "from faster_whisper.utils import download_model; download_model('
 COPY main.py ./
 COPY src ./src
 
+RUN mkdir -p /audio_files && chown 1000:1000 /audio_files
+
 CMD ["python", "main.py"]

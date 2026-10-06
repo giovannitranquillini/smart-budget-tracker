@@ -20,6 +20,9 @@ export type BudgetRecordDraft = {
   description: string
 }
 
+/** Completed stage of the AI pipeline (SSE event `stage`), named after the backend routing key. */
+export type PipelineStage = 'audio.processed' | 'llm.processed'
+
 /** Accepted payload for creating a new budget record. */
 export type NewBudgetRecord = {
   amount: number

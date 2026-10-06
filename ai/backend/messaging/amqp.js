@@ -25,13 +25,20 @@ function sendMessage(queue, message) {
 }
 
 /**
- * @param {string} queue
+ * @param {{ queue: string, exchange?: string, binding?: string }} settings
  * @param {(message: string) => void} callback
  */
-function readMessage(queue, callback) {
+function readMessage(settings, callback) {
+  const { queue, exchange, binding } = settings;
+
   channel.assertQueue(queue, {
     durable: true
   });
+
+  if(exchange && binding) {
+    channel.assertExchange(exchange, 'topic', { durable: true });
+    channel.bindQueue(queue, exchange, binding);
+  }
 
   channel.consume(queue, (msg) => {
     if (msg !== null) {

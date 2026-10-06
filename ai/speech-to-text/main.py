@@ -35,10 +35,12 @@ def callback(ch, method, properties, body):
         "text": text,
     }
 
+    ch.exchange_declare(exchange='pipeline', exchange_type='topic', durable=True)
+    
     # Publish the transcription on the other queue
     ch.basic_publish(
-        exchange='',                 # default exchange: routing_key = queue name
-        routing_key='transcriptions',
+        exchange='pipeline',                 # default exchange: routing_key = queue name
+        routing_key='audio.processed',
         body=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
         properties=pika.BasicProperties(
             content_type='application/json',
@@ -49,7 +51,7 @@ def callback(ch, method, properties, body):
 
     # Ack only after the result has been published
     ch.basic_ack(delivery_tag=method.delivery_tag)
-    print(f" [x] Trascrizione inviata su 'transcriptions'")
+    print(f" [x] Trascrizione inviata su 'audio.processed'")
 
 def main():
 
@@ -63,12 +65,12 @@ def main():
     channel = connection.channel()
 
     channel.queue_declare(
-        queue='speech_to_text',
+        queue='speech_to_text.processing',
         durable=True
     )
 
     channel.basic_consume(
-        queue='speech_to_text', 
+        queue='speech_to_text.processing', 
         on_message_callback=callback, 
         auto_ack=False
     )
