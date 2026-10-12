@@ -107,7 +107,6 @@ services:
       BACKEND_URL: http://backend:3001
     ports:
       - "3002:3002"
-      - "50051:50051"
     depends_on:
       rabbitmq:
         condition: service_healthy
