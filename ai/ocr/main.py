@@ -12,12 +12,12 @@ def callback(ch, method, properties, body):
         job_id = message["jobId"]
         image_filepath = message["filePath"]
     except (json.JSONDecodeError, KeyError) as e:
-        print(f"Messaggio non valido: {e}")
+        print(f"Invalid message: {e}")
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
         return
 
     if not os.path.exists(image_filepath):
-        print(f"Image file non trovato: {image_filepath}")
+        print(f"Image file not found: {image_filepath}")
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
         return
 
@@ -25,7 +25,7 @@ def callback(ch, method, properties, body):
         print(f"Analyzing image: {image_filepath}")
         text = analyze_image(image_filepath)
     except Exception as e:
-        print(f"Errore durante l'analisi dell'immagine: {e}")
+        print(f"Error while analyzing the image: {e}")
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
         return
 
@@ -51,7 +51,7 @@ def callback(ch, method, properties, body):
 
     # Ack only after the result has been published
     ch.basic_ack(delivery_tag=method.delivery_tag)
-    print(f" [x] Testo inviato a 'ocr.processed'")
+    print(f" [x] Text sent to 'ocr.processed'")
 
 def main():
 

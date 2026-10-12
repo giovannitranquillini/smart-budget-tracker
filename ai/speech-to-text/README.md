@@ -1,22 +1,22 @@
-# Setup ambiente Speech-to-Text con faster-whisper (GPU)
+# Speech-to-Text environment setup with faster-whisper (GPU)
 
-Guida per configurare un ambiente Python con `faster-whisper` e supporto GPU CUDA, per trascrizione audio in batch.
+Guide to setting up a Python environment with `faster-whisper` and CUDA GPU support, for batch audio transcription.
 
-## Requisiti
+## Requirements
 
-- GPU NVIDIA con driver installato
+- NVIDIA GPU with the driver installed
 - Python 3.12
-- ~4GB di VRAM (testato con modello `small`)
+- ~4GB of VRAM (tested with the `small` model)
 
-## 1. Verifica che la GPU sia visibile al sistema
+## 1. Check that the GPU is visible to the system
 
 ```bash
 nvidia-smi
 ```
 
-Prendi nota del valore **CUDA Version** mostrato in alto a destra: ti servirà al passo 4 per scegliere i pacchetti giusti.
+Take note of the **CUDA Version** value shown in the top right: you'll need it in step 4 to pick the right packages.
 
-Se questo comando fallisce (`command not found` o errori di driver), il driver NVIDIA non è installato correttamente. Prova:
+If this command fails (`command not found` or driver errors), the NVIDIA driver is not installed correctly. Try:
 
 ```bash
 ubuntu-drivers devices
@@ -24,9 +24,9 @@ sudo ubuntu-drivers autoinstall
 sudo reboot
 ```
 
-Dopo il riavvio, ripeti `nvidia-smi` per confermare che la GPU sia visibile prima di proseguire.
+After the reboot, run `nvidia-smi` again to confirm the GPU is visible before moving on.
 
-## 2. Crea l'ambiente virtuale
+## 2. Create the virtual environment
 
 ```bash
 cd /home/giovanni/Desktop/smart-budget-tracker/ai/speech-to-text
@@ -34,9 +34,9 @@ python3 -m venv whisper-env
 source whisper-env/bin/activate
 ```
 
-> Per ricreare l'ambiente da zero (es. dopo problemi): `rm -rf whisper-env` prima del comando sopra.
+> To recreate the environment from scratch (e.g. after problems): `rm -rf whisper-env` before the command above.
 
-## 3. Installa faster-whisper
+## 3. Install faster-whisper
 
 ```bash
 pip install --upgrade pip
@@ -47,9 +47,9 @@ pip install faster-whisper
 pip install -r requirements.txt
 ```
 
-## 4. Installa le librerie NVIDIA (cuBLAS / cuDNN)
+## 4. Install the NVIDIA libraries (cuBLAS / cuDNN)
 
-Scegli in base alla **CUDA Version** vista al passo 1:
+Choose based on the **CUDA Version** seen in step 1:
 
 **CUDA 12.x:**
 ```bash
@@ -61,28 +61,28 @@ pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
 pip install nvidia-cublas-cu11 nvidia-cudnn-cu8
 ```
 
-## 5. Configura `LD_LIBRARY_PATH` in modo permanente per questo venv
+## 5. Set `LD_LIBRARY_PATH` permanently for this venv
 
 ```bash
 echo 'export LD_LIBRARY_PATH=`python3 -c "import nvidia.cublas.lib, nvidia.cudnn.lib; print(nvidia.cublas.lib.__path__[0] + \":\" + nvidia.cudnn.lib.__path__[0])"`' >> whisper-env/bin/activate
 ```
 
-Ricarica l'ambiente perché la modifica abbia effetto:
+Reload the environment for the change to take effect:
 
 ```bash
 deactivate
 source whisper-env/bin/activate
 ```
 
-Verifica che la variabile sia stata settata:
+Check that the variable has been set:
 
 ```bash
 echo $LD_LIBRARY_PATH
 ```
 
-Dovresti vedere due path (cublas e cudnn) separati da `:`.
+You should see two paths (cublas and cudnn) separated by `:`.
 
-## 6. Script di esempio (`main.py`)
+## 6. Example script (`main.py`)
 
 ```python
 from faster_whisper import WhisperModel
@@ -94,23 +94,23 @@ for segment in segments:
     print(f"[{segment.start:.2f}s -> {segment.end:.2f}s] {segment.text}")
 ```
 
-> Nota: `segments` è un generatore. Senza il ciclo `for` che lo consuma, non viene stampato nulla.
+> Note: `segments` is a generator. Without the `for` loop consuming it, nothing gets printed.
 
-## 7. Esegui
+## 7. Run
 
 ```bash
 python main.py
 ```
 
-Al primo avvio il modello (`small`, ~500MB) viene scaricato automaticamente da Hugging Face e messo in cache locale (`~/.cache/huggingface`).
+On the first run the model (`small`, ~500MB) is downloaded automatically from Hugging Face and cached locally (`~/.cache/huggingface`).
 
 ---
 
-## Riepilogo comandi (setup rapido)
+## Command summary (quick setup)
 
 ```bash
 cd /home/giovanni/Desktop/smart-budget-tracker/ai/speech-to-text
-nvidia-smi   # controlla CUDA Version prima di continuare
+nvidia-smi   # check the CUDA Version before continuing
 
 rm -rf whisper-env
 python3 -m venv whisper-env
@@ -118,7 +118,7 @@ source whisper-env/bin/activate
 
 pip install --upgrade pip
 pip install faster-whisper
-pip install nvidia-cublas-cu12 nvidia-cudnn-cu12   # adatta cu12/cu11 in base a nvidia-smi
+pip install nvidia-cublas-cu12 nvidia-cudnn-cu12   # pick cu12/cu11 based on nvidia-smi
 
 echo 'export LD_LIBRARY_PATH=`python3 -c "import nvidia.cublas.lib, nvidia.cudnn.lib; print(nvidia.cublas.lib.__path__[0] + \":\" + nvidia.cudnn.lib.__path__[0])"`' >> whisper-env/bin/activate
 deactivate
@@ -129,9 +129,9 @@ python main.py
 
 ## Troubleshooting
 
-| Errore | Causa probabile | Soluzione |
+| Error | Likely cause | Fix |
 |---|---|---|
-| `TypeError: expected str, bytes or os.PathLike object, not NoneType` | `__file__` non disponibile su namespace package NVIDIA | Usa `__path__[0]` invece di `os.path.dirname(__file__)` (vedi passo 5) |
-| `RuntimeError: CUDA failed with error no CUDA-capable device is detected` | Driver NVIDIA non caricato o mismatch di versione | Verifica `nvidia-smi`, reinstalla driver, riavvia |
-| `CUDA out of memory` | VRAM insufficiente per il modello scelto | Usa modello più piccolo (`base`) o `compute_type="int8_float16"` |
-| Warning HF Hub rate limit | Nessun token Hugging Face configurato | Opzionale: imposta `HF_TOKEN` per download più veloci |
+| `TypeError: expected str, bytes or os.PathLike object, not NoneType` | `__file__` not available on the NVIDIA namespace package | Use `__path__[0]` instead of `os.path.dirname(__file__)` (see step 5) |
+| `RuntimeError: CUDA failed with error no CUDA-capable device is detected` | NVIDIA driver not loaded or version mismatch | Check `nvidia-smi`, reinstall the driver, reboot |
+| `CUDA out of memory` | Not enough VRAM for the chosen model | Use a smaller model (`base`) or `compute_type="int8_float16"` |
+| HF Hub rate limit warning | No Hugging Face token configured | Optional: set `HF_TOKEN` for faster downloads |

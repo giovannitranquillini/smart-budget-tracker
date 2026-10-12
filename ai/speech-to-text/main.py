@@ -12,20 +12,20 @@ def callback(ch, method, properties, body):
         job_id = message["jobId"]
         audio_filepath = message["filePath"]
     except (json.JSONDecodeError, KeyError) as e:
-        print(f"Messaggio non valido: {e}")
+        print(f"Invalid message: {e}")
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
         return
 
     if not os.path.exists(audio_filepath):
-        print(f"Audio file non trovato: {audio_filepath}")
+        print(f"Audio file not found: {audio_filepath}")
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
         return
 
     try: 
-        print(f"Trascrivo: {audio_filepath}")
+        print(f"Transcribing: {audio_filepath}")
         text = transcribe_audio(audio_filepath)
     except Exception as e:
-        print(f"Errore durante la trascrizione: {e}")
+        print(f"Error during transcription: {e}")
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
         return
 
@@ -51,7 +51,7 @@ def callback(ch, method, properties, body):
 
     # Ack only after the result has been published
     ch.basic_ack(delivery_tag=method.delivery_tag)
-    print(f" [x] Trascrizione inviata su 'audio.processed'")
+    print(f" [x] Transcription sent to 'audio.processed'")
 
 def main():
 

@@ -7,15 +7,15 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# ---- dipendenze Python, incluse le librerie CUDA userspace (cuBLAS/cuDNN) ----
+# ---- Python dependencies, including the CUDA userspace libraries (cuBLAS/cuDNN) ----
 COPY requirements.txt ./
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-cache-dir -r requirements.txt
 
-# ctranslate2 carica cuBLAS e cuDNN a runtime: senza questo non le trova
+# ctranslate2 loads cuBLAS and cuDNN at runtime: without this it can't find them
 ENV LD_LIBRARY_PATH=/usr/local/lib/python3.12/site-packages/nvidia/cublas/lib:/usr/local/lib/python3.12/site-packages/nvidia/cudnn/lib
 
-# ---- scarica il modello in fase di build (~500MB), così non lo fa a ogni avvio ----
+# ---- download the model at build time (~500MB), so it doesn't happen on every startup ----
 ENV HF_HOME=/opt/hf-cache
 RUN python -c "from faster_whisper.utils import download_model; download_model('large-v3-turbo')"
 

@@ -4,19 +4,19 @@ FROM node:26-alpine AS base
 WORKDIR /app
 RUN npm install -g pnpm@10.30.3
 
-# ---- dipendenze complete: servono i devDependencies (typescript, prisma, tsc-alias) per la build ----
+# ---- full dependencies: devDependencies (typescript, prisma, tsc-alias) are needed for the build ----
 FROM base AS deps
 COPY package.json pnpm-lock.yaml ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
-# ---- solo dipendenze di produzione, gira in parallelo allo stage "build" ----
+# ---- production dependencies only, runs in parallel with the "build" stage ----
 FROM base AS prod-deps
 COPY package.json pnpm-lock.yaml ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --prod
 
-# ---- genera il client Prisma e compila TypeScript ----
+# ---- generate the Prisma client and compile TypeScript ----
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json tsconfig.json prisma.config.ts ./
@@ -24,7 +24,7 @@ COPY src ./src
 RUN pnpm run prisma:generate
 RUN pnpm run build
 
-# ---- immagine finale ----
+# ---- final image ----
 FROM base AS runner
 ENV NODE_ENV=production
 COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules

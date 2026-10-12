@@ -33,7 +33,7 @@ def callback(ch, method, properties, body):
 
     # Ack only after the result has been published
     ch.basic_ack(delivery_tag=method.delivery_tag)
-    print(f" [x] Nuovo budget record generato")
+    print(f" [x] New budget record generated")
 
 def main():
 
