@@ -1,5 +1,5 @@
 # Virtual environment
-whisper-env/
+ocr-env/
 
 # Python bytecode
 __pycache__/
