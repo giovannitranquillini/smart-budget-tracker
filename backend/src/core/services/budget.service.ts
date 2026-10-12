@@ -3,9 +3,13 @@ import { BudgetCategory, BudgetRecord } from "../../generated/prisma/browser.js"
 
 import logger from "@core/lib/logger.js";
 
+/** Whether the record is money spent or received: once saved, it becomes the sign of the amount. */
+export type BudgetRecordType = "expense" | "income";
+
 /** Record extracted by the LLM from the audio: fields it cannot determine are null. */
 export type BudgetRecordDraft = {
-    amount: number | null;
+    type: BudgetRecordType | null;
+    amount: number | null; // always positive, the direction is in type
     category: string | null;
     description: string | null;
 };
@@ -78,10 +82,13 @@ export const BudgetService = () => {
      * @returns A promise resolving when the draft is handled.
      */
     async function handleDraft(jobId: string, draft: BudgetRecordDraft) {
-        if (!draft.amount || !draft.category || !draft.description) {
+        if (!draft.amount || !draft.category || !draft.description || (draft.type !== "expense" && draft.type !== "income")) {
             logger.warn(`[BudgetService] Incomplete budget record received: ${JSON.stringify(draft)}`);
             return;
         }
+
+        // the LLM may still add a sign to the amount: the direction is only in type
+        draft.amount = Math.abs(draft.amount);
 
         const categoryRecord = await prisma.budgetCategory.findUnique({ where: { name: draft.category } });
 
@@ -102,20 +109,41 @@ export const BudgetService = () => {
     /**
      * CRUD operations for budget categories and records.
      * 
-     * - createBudgetCategory: Creates a new budget category.
-     * - listBudgetCategory: Lists all budget categories.
+     * - createBudgetCategory: Creates a new budget category, returns false if the name is already taken.
+     * - listBudgetCategory: Lists all budget categories, sorted by name.
+     * - deleteBudgetCategory: Deletes a budget category, unless it does not exist or some records still use it.
      * - createBudgetRecord: Creates a new budget record.
      * - listBudgetRecord: Lists all budget records, including their category names.
+     * - deleteBudgetRecord: Deletes a budget record, returns false if it does not exist.
      */
 
-    async function createBudgetCategory(params: { name: string }) {
+    async function createBudgetCategory(params: { name: string }): Promise<boolean> {
         logger.info(`[BudgetService] Creating new budget category.`);
-        await prisma.budgetCategory.create({data: params});
+
+        const name = params.name.trim();
+
+        // the name is unique: check it first instead of catching the database error
+        const existing = await prisma.budgetCategory.findUnique({ where: { name } });
+        if (existing) return false;
+
+        await prisma.budgetCategory.create({data: { name }});
+        return true;
     }
 
     async function listBudgetCategory(): Promise<BudgetCategory[]> {
         logger.info(`[BudgetService] Listing budget categories.`);
-        return await prisma.budgetCategory.findMany();
+        return await prisma.budgetCategory.findMany({ orderBy: { name: 'asc' } });
+    }
+
+    async function deleteBudgetCategory(id: string): Promise<"deleted" | "not-found" | "in-use"> {
+        logger.info(`[BudgetService] Deleting budget category ${id}.`);
+
+        // records reference their category: deleting a used one would break them
+        const usedBy = await prisma.budgetRecord.count({ where: { categoryId: id } });
+        if (usedBy > 0) return "in-use";
+
+        const { count } = await prisma.budgetCategory.deleteMany({ where: { id } });
+        return count > 0 ? "deleted" : "not-found";
     }
 
     async function createBudgetRecord(params: { amount: number; description: string, categoryId: string }) {
@@ -138,11 +166,20 @@ export const BudgetService = () => {
         });
     }
 
+    async function deleteBudgetRecord(id: string): Promise<boolean> {
+        logger.info(`[BudgetService] Deleting budget record ${id}.`);
+        // deleteMany does not throw when the record is missing: the count tells us
+        const { count } = await prisma.budgetRecord.deleteMany({ where: { id } });
+        return count > 0;
+    }
+
     return {
         createBudgetCategory,
         listBudgetCategory,
+        deleteBudgetCategory,
         createBudgetRecord,
         listBudgetRecord,
+        deleteBudgetRecord,
         subscribeToJob,
         handleStage,
         handleDraft

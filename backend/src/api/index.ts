@@ -8,12 +8,14 @@ import { registerRoutes } from '@api/routes/index.js'
 import { BudgetService } from '@core/services/budget.service.js';
 import { registerConsumers } from './consumers/index.js';
 import { AudioService } from '@core/services/audio.service.js';
+import { ImageService } from '@core/services/image.service.js';
 
 const server = fastify()
 
 // CORS configuration
 await server.register(cors, {
-  origin: true
+  origin: true,
+  methods: ['GET', 'HEAD', 'POST', 'DELETE'] // the default allows only GET, HEAD and POST
 });
 
 // File uploads (multipart/form-data)
@@ -46,8 +48,9 @@ await server.register(swaggerUi, {
 
 const budgetService = BudgetService();
 const audioService = AudioService();
+const imageService = ImageService();
 
-registerRoutes(server, {budgetService, audioService});
+registerRoutes(server, {budgetService, audioService, imageService});
 registerConsumers({ budgetService });
 
 // 0.0.0.0 to be reachable from outside the Docker container

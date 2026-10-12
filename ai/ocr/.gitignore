@@ -1,0 +1,13 @@
+# Virtual environment
+whisper-env/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Environment variables
+.env
+
+# Model / cache downloads
+.cache/
+models/

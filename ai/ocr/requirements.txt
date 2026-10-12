@@ -1,0 +1,8 @@
+pika==1.4.4
+python-dotenv==1.1.1
+
+paddleocr>=3.5
+onnxruntime
+ 
+# NVIDIA GPU (CUDA 12.x): replace the line above with
+# onnxruntime-gpu

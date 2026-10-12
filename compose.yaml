@@ -85,10 +85,12 @@ services:
       DATABASE_URL: postgres://admin:admin@postgres:5432/smart_budget_tracker
       RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672/
       AUDIO_STORAGE_PATH: /audio_files
+      IMAGE_STORAGE_PATH: /image_files
     ports:
       - "3001:3001"
     volumes:
       - audio_files:/audio_files
+      - image_files:/image_files
     depends_on:
       postgres:
         condition: service_started
@@ -130,6 +132,18 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+  
+  ocr:
+    build: ./ai/ocr
+    container_name: ocr
+    environment:
+      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672/
+      IMAGE_STORAGE_PATH: /image_files
+    volumes:
+      - image_files:/image_files
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
   llm:
     build: ./ai/llm
@@ -149,4 +163,5 @@ volumes:
   rabbitmq_data:
   ollama_data:
   audio_files:
+  image_files:
 

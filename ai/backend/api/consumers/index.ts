@@ -1,5 +1,5 @@
 import { sendMessage, readMessage } from '../../messaging/amqp.js'
-import { buildPromptForTranscription } from '../prompt.js'
+import { buildPromptForTranscription, buildPromptForOcr } from '../prompt.js'
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
@@ -26,8 +26,7 @@ const registerConsumers = () => {
    * to process and forwards them to the 'speech_to_text.processing' queue.
    */
   readMessage({ queue: 'audio.processing' }, (msg: any) => {
-    console.log(`1. Received audio filepath to process: ${msg}`);
-
+    console.log(`Received audio filepath to process: ${msg}`);
     sendMessage('speech_to_text.processing', msg);
   });
 
@@ -38,7 +37,7 @@ const registerConsumers = () => {
    * builds a prompt for the LLM, and forwards it to the 'llm.processing' queue.
    */
   readMessage({ queue: 'audio.processed', exchange: 'pipeline', binding: 'audio.processed' }, async (msg: any) => {
-    console.log(`2. Received transcription: ${msg}`);
+    console.log(`Received transcription: ${msg}`);
 
     try {
       const json = JSON.parse(msg);
@@ -56,13 +55,48 @@ const registerConsumers = () => {
   });
 
   /**
+   * Consumer for the 'image.processing' queue.
+   * 
+   * It listens for messages containing image file paths
+   * to process and forwards them to the 'ocr.processing' queue.
+   */
+  readMessage({ queue: 'image.processing' }, (msg: any) => {
+    console.log(`Received image filepath to process: ${msg}`);
+    sendMessage('ocr.processing', msg);
+  });
+
+  /**
+   * Consumer for the 'ocr.processed' queue.
+   * 
+   * It listens for messages containing extracted text from images,
+   * builds a prompt for the LLM, and forwards it to the 'llm.processing' queue.
+   */
+  readMessage({ queue: 'ocr.processed', exchange: 'pipeline', binding: 'ocr.processed' }, async (msg: any) => {
+    console.log(`Received OCR text: ${msg}`);
+
+    try {
+      const json = JSON.parse(msg);
+
+      const jsonPayload = {
+        jobId: json.jobId,
+        text: json.text,
+        prompt: buildPromptForOcr(json.text, await fetchCategories())
+      };
+
+      sendMessage('llm.processing', JSON.stringify(jsonPayload));
+    } catch (error) {
+      console.error(`Error processing OCR text: ${error}`);
+    }
+  });
+
+  /**
    * Consumer for the 'llm.processed' queue.
    * 
    * It listens for messages containing processed output from the LLM 
    * and forwards them to the 'budget_record.processed' queue on the domain logic backend
    */
   readMessage({ queue: 'llm.processed', exchange: 'pipeline', binding: 'llm.processed' }, (msg: any) => {
-    console.log(`3. Received processed LLM output: ${msg}`);
+    console.log(`Received processed LLM output: ${msg}`);
 
     sendMessage('budget_record.processed', msg);
   });

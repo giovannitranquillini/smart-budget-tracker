@@ -2,12 +2,18 @@ export const CreateBudgetCategoryInput = {
     body: {
         type: 'object',
         properties: {
-            name: { type: 'string' }
+            name: { type: 'string', minLength: 1, pattern: '\\S' } // at least one non-blank character
         },
         required: ['name']
     },
     response: {
         201: {},
+        409: {
+            type: 'object',
+            properties: {
+                error: { type: 'string' }
+            }
+        },
         500: {
             type: 'object',
             properties: {
@@ -56,6 +62,62 @@ export const CreateBudgetRecordInput = {
     },
     response: {
         201: {},
+        500: {
+            type: 'object',
+            properties: {
+                error: { type: 'string' }
+            }
+        }
+    }
+};
+
+export const DeleteBudgetRecordInput = {
+    params: {
+        type: 'object',
+        properties: {
+            id: { type: 'string' }
+        },
+        required: ['id']
+    },
+    response: {
+        204: {},
+        404: {
+            type: 'object',
+            properties: {
+                error: { type: 'string' }
+            }
+        },
+        500: {
+            type: 'object',
+            properties: {
+                error: { type: 'string' }
+            }
+        }
+    }
+};
+
+export const DeleteBudgetCategoryInput = {
+    params: {
+        type: 'object',
+        properties: {
+            id: { type: 'string' }
+        },
+        required: ['id']
+    },
+    response: {
+        204: {},
+        404: {
+            type: 'object',
+            properties: {
+                error: { type: 'string' }
+            }
+        },
+        409: {
+            type: 'object',
+            properties: {
+                error: { type: 'string' }
+            }
+        },
         500: {
             type: 'object',
             properties: {

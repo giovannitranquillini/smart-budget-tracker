@@ -13,15 +13,23 @@ export type BudgetCategory = {
   name: string
 }
 
-/** Draft record extracted by the AI from audio, used to fill in the form (SSE event `budget-record`). */
+/** Whether the record is money spent or received: the backend stores it as the sign of the amount. */
+export type BudgetRecordType = 'expense' | 'income'
+
+/** Draft record extracted by the AI from audio or image, used to fill in the form (SSE event `budget-record`). */
 export type BudgetRecordDraft = {
+  type: BudgetRecordType
+  // Always positive, the direction is in type.
   amount: number
   category: string
   description: string
 }
 
 /** Completed stage of the AI pipeline (SSE event `stage`), named after the backend routing key. */
-export type PipelineStage = 'audio.processed' | 'llm.processed'
+export type PipelineStage = 'audio.processed' | 'ocr.processed' | 'llm.processed'
+
+/** Input the AI pipeline extracts the record from: each one has its own upload and SSE endpoint. */
+export type BudgetRecordSource = 'audio' | 'image'
 
 /** Accepted payload for creating a new budget record. */
 export type NewBudgetRecord = {

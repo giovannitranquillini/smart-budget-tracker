@@ -9,12 +9,15 @@ type AudioRecorderProps = {
   status: RecorderStatus
   stage: PipelineStage | null
   errorMessage?: string
+  // E.g. while an image is being processed: one source at a time.
+  disabled?: boolean
   onToggle: () => void
 }
 
 // Progress dot shown while processing: `uploaded` until the first pipeline stage is completed.
-const STAGE_DOTS: Record<PipelineStage | 'uploaded', { color: string; label: string }> = {
-  uploaded: { color: 'bg-slate-300', label: 'Audio uploaded' },
+const UPLOADED_DOT = { color: 'bg-slate-300', label: 'Audio uploaded' }
+
+const STAGE_DOTS: Partial<Record<PipelineStage, { color: string; label: string }>> = {
   'audio.processed': { color: 'bg-amber-400', label: 'Audio transcribed' },
   'llm.processed': { color: 'bg-emerald-500', label: 'Transaction extracted' },
 }
@@ -27,7 +30,7 @@ const LABELS: Record<RecorderStatus, string> = {
   error: 'Couldn’t read the audio',
 }
 
-export default function AudioRecorder({ status, stage, errorMessage, onToggle }: AudioRecorderProps) {
+export default function AudioRecorder({ status, stage, errorMessage, disabled, onToggle }: AudioRecorderProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [wasRecording, setWasRecording] = useState(false)
 
@@ -65,7 +68,7 @@ export default function AudioRecorder({ status, stage, errorMessage, onToggle }:
     return `${String(minutes).padStart(2, '0')}:${String(rest).padStart(2, '0')}`
   }
 
-  const stageDot = STAGE_DOTS[stage ?? 'uploaded']
+  const stageDot = (stage && STAGE_DOTS[stage]) || UPLOADED_DOT
 
   const buttonClass = isRecording
     ? 'animate-pulse bg-red-500 hover:bg-red-600'
@@ -76,7 +79,7 @@ export default function AudioRecorder({ status, stage, errorMessage, onToggle }:
       <button
         type="button"
         onClick={onToggle}
-        disabled={isProcessing}
+        disabled={isProcessing || disabled}
         aria-label={isRecording ? 'Stop recording' : 'Start recording'}
         className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition ${buttonClass}`}
       >
