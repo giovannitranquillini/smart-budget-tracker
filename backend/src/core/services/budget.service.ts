@@ -15,12 +15,13 @@ export type BudgetRecordDraft = {
 };
 
 /** Completed stage of the AI pipeline, named after the routing key of its event on the "pipeline" exchange. */
-export type PipelineStage = "audio.processed" | "llm.processed";
+export type PipelineStage = "audio.processed" | "ocr.processed" | "llm.processed";
 
 /** Who is waiting for the updates of a job (the SSE stream opened by the UI). */
 export type JobListener = {
     onStage: (stage: PipelineStage) => void;
     onDraft: (draft: BudgetRecordDraft) => void;
+    onFailure: (error: string) => void;
 };
 
 // How long we keep a draft that arrived before the UI opened the SSE stream
@@ -29,6 +30,7 @@ const DRAFT_TTL_MS = 60_000; // 1 minute
 // Module level: shared by every BudgetService instance
 const sseConnections = new Map<string, JobListener>(); // SSE connections
 const drafts = new Map<string, BudgetRecordDraft>(); // drafts that arrived before the UI opened the SSE stream
+const failures = new Map<string, string>(); // failures that arrived before the UI opened the SSE stream
 
 /**
  * The BudgetService is responsible for handling budget records and categories domain logic. 
@@ -49,8 +51,15 @@ export const BudgetService = () => {
      * @returns A function to stop listening for drafts.
      */
     function subscribeToJob(jobId: string, listener: JobListener): () => void {
-        const ready = drafts.get(jobId);
+        
+        const failure = failures.get(jobId);
+        if (failure !== undefined) {
+            failures.delete(jobId);
+            listener.onFailure(failure); // immediately notify the failure
+            return () => {};
+        }
 
+        const ready = drafts.get(jobId);
         if (ready !== undefined) {
             drafts.delete(jobId);
             listener.onDraft(ready); // immediately notify the draft is ready
@@ -84,7 +93,7 @@ export const BudgetService = () => {
     async function handleDraft(jobId: string, draft: BudgetRecordDraft) {
         if (!draft.amount || !draft.category || !draft.description || (draft.type !== "expense" && draft.type !== "income")) {
             logger.warn(`[BudgetService] Incomplete budget record received: ${JSON.stringify(draft)}`);
-            return;
+            return handleFailure(jobId, "The record could not be fully extracted");
         }
 
         // the LLM may still add a sign to the amount: the direction is only in type
@@ -94,7 +103,7 @@ export const BudgetService = () => {
 
         if (!categoryRecord) {
             logger.error(`[BudgetService] Category "${draft.category}" not found.`);
-            return;
+            return handleFailure(jobId, `Category "${draft.category}" not found`);
         }
 
         // notify clients that a new draft is available for the given jobId
@@ -104,6 +113,23 @@ export const BudgetService = () => {
         // nobody listening (yet): keep it for a while
         drafts.set(jobId, draft);
         setTimeout(() => drafts.delete(jobId), DRAFT_TTL_MS);
+    }
+
+    /**
+     * Handles a failed budget record processing job, notifying the client listening on the jobId SSE stream.
+     * 
+     * @param jobId 
+     * @param error 
+     * @returns 
+     */
+    function handleFailure(jobId: string, error: string) {
+        logger.warn(`[BudgetService] Job ${jobId} failed: ${error}`);
+
+        const listener = sseConnections.get(jobId);
+        if (listener) return listener.onFailure(error);
+
+        failures.set(jobId, error);
+        setTimeout(() => failures.delete(jobId), DRAFT_TTL_MS);
     }
 
     /**
@@ -182,6 +208,7 @@ export const BudgetService = () => {
         deleteBudgetRecord,
         subscribeToJob,
         handleStage,
-        handleDraft
+        handleDraft,
+        handleFailure
     }
 }

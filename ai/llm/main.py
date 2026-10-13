@@ -4,17 +4,40 @@ from dotenv import load_dotenv
 import pika, sys, os
 import json
 
+def publish_failure(ch, properties, job_id, error):
+    ch.basic_publish(
+        exchange='pipeline',
+        routing_key='llm.failed',
+        body=json.dumps({"jobId": job_id, "error": error}).encode('utf-8'),
+        properties=pika.BasicProperties(
+            content_type='application/json',
+            delivery_mode=2,
+            correlation_id=properties.correlation_id,
+        ),
+    )
+
 def callback(ch, method, properties, body):
     print(f" [x] Received {body}")
 
-    # Decode the JSON message
-    incoming_payload = json.loads(body.decode('utf-8'))
-
+    try:
+        incoming_payload = json.loads(body.decode('utf-8'))
+        job_id = incoming_payload["jobId"]
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"Invalid message: {e}")
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        return
+    
     # send everything to the LLM to generate the new record
-    budget_record = execute_llm(incoming_payload['prompt'], incoming_payload['text'])
+    try:
+        budget_record = execute_llm(incoming_payload['prompt'], incoming_payload['text'])
+    except Exception as e:
+        print(f"Error during LLM execution: {e}")
+        publish_failure(ch, properties, job_id, str(e))   # routing_key='llm.failed'
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        return
 
     payload = {
-        "jobId": incoming_payload["jobId"],
+        "jobId": job_id,
         "budgetRecord": budget_record,
     }
 

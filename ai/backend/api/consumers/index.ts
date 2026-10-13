@@ -1,4 +1,4 @@
-import { sendMessage, readMessage } from '../../messaging/amqp.js'
+import { sendMessage, readMessage, publishMessage } from '../../messaging/amqp.js'
 import { buildPromptForTranscription, buildPromptForOcr } from '../prompt.js'
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
@@ -38,10 +38,9 @@ const registerConsumers = () => {
    */
   readMessage({ queue: 'audio.processed', exchange: 'pipeline', binding: 'audio.processed' }, async (msg: any) => {
     console.log(`Received transcription: ${msg}`);
+    const json = JSON.parse(msg);
 
     try {
-      const json = JSON.parse(msg);
-
       const jsonPayload = {
         jobId: json.jobId,
         text: json.text.join(" "),
@@ -51,6 +50,7 @@ const registerConsumers = () => {
       sendMessage('llm.processing', JSON.stringify(jsonPayload));
     } catch (error) {
       console.error(`Error processing transcription: ${error}`);
+      publishMessage('prompt.failed', JSON.stringify({ jobId: json.jobId, error: String(error) }));
     }
   });
 
@@ -73,10 +73,9 @@ const registerConsumers = () => {
    */
   readMessage({ queue: 'ocr.processed', exchange: 'pipeline', binding: 'ocr.processed' }, async (msg: any) => {
     console.log(`Received OCR text: ${msg}`);
+    const json = JSON.parse(msg);
 
     try {
-      const json = JSON.parse(msg);
-
       const jsonPayload = {
         jobId: json.jobId,
         text: json.text,
@@ -86,6 +85,7 @@ const registerConsumers = () => {
       sendMessage('llm.processing', JSON.stringify(jsonPayload));
     } catch (error) {
       console.error(`Error processing OCR text: ${error}`);
+      publishMessage('prompt.failed', JSON.stringify({ jobId: json.jobId, error: String(error) }));
     }
   });
 

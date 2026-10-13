@@ -1,3 +1,4 @@
+import logger from "@core/lib/logger.js";
 import amqp from "amqplib";
 
 const connectionUrl = process.env.RABBITMQ_URL;
@@ -28,7 +29,10 @@ function sendMessage(queue: string, message: string) {
  * @param callback The function to call when a message is received. It also receives the routing key
  * the message was published with (e.g. "audio.processed"), useful when the binding uses wildcards.
  */
-function readMessage(settings: { queue: string; exchange?: string; binding?: string }, callback: (msg: string, routingKey: string) => void) {
+function readMessage(
+  settings: { queue: string; exchange?: string; binding?: string }, 
+  callback: (msg: string, routingKey: string) => Promise<void> | void
+) {
 
   const { queue, exchange, binding } = settings;
 
@@ -39,10 +43,15 @@ function readMessage(settings: { queue: string; exchange?: string; binding?: str
     channel.bindQueue(queue, exchange, binding); // bind the queue to the exchange
   }
 
-  channel.consume(queue, (msg) => {
-    if (msg !== null) {
-      callback(msg.content.toString(), msg.fields.routingKey);
+  channel.consume(queue, async (msg) => {
+    if(msg === null) return; // no message received, just return
+
+    try {
+      await callback(msg.content.toString(), msg.fields.routingKey);
       channel.ack(msg);
+    } catch (error) {
+      logger.error(`[AMQP] Error handling message from "${queue}": ${error}`);
+      channel.nack(msg, false, false); // no requeue: a message that always fails would loop forever
     }
   });
 }

@@ -1,4 +1,6 @@
-export type MessageCallback = (message: string) => void;
+export type MessageCallback = (message: string, routingKey: string) => Promise<void> | void;
+
+export function publishMessage(routingKey: string, message: string): void;
 
 export function sendMessage(queue: string, message: string | Buffer): void;
 export type ReadSettings = {

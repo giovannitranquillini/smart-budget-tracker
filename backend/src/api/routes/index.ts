@@ -84,6 +84,10 @@ export const registerRoutes = (server: FastifyInstance, deps: serviceDeps) => {
       onDraft: (draft) => {
         reply.raw.write(`event: budget-record\ndata: ${JSON.stringify(draft)}\n\n`);
         reply.raw.end();
+      },
+      onFailure: (error) => {
+        reply.raw.write(`event: failed\ndata: ${JSON.stringify({ error })}\n\n`);
+        reply.raw.end();
       }
     });
 
@@ -157,6 +161,10 @@ export const registerRoutes = (server: FastifyInstance, deps: serviceDeps) => {
       },
       onDraft: (draft) => {
         reply.raw.write(`event: budget-record\ndata: ${JSON.stringify(draft)}\n\n`);
+        reply.raw.end();
+      },
+      onFailure: (error) => {
+        reply.raw.write(`event: failed\ndata: ${JSON.stringify({ error })}\n\n`);
         reply.raw.end();
       }
     });

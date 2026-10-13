@@ -4,6 +4,18 @@ from dotenv import load_dotenv
 import pika, sys, os
 import json
 
+def publish_failure(ch, properties, job_id, error):
+    ch.basic_publish(
+        exchange='pipeline',
+        routing_key='ocr.failed',
+        body=json.dumps({"jobId": job_id, "error": error}).encode('utf-8'),
+        properties=pika.BasicProperties(
+            content_type='application/json',
+            delivery_mode=2,
+            correlation_id=properties.correlation_id,
+        ),
+    )
+
 def callback(ch, method, properties, body):
     print(f" [x] Received {body}")
 
@@ -18,7 +30,8 @@ def callback(ch, method, properties, body):
 
     if not os.path.exists(image_filepath):
         print(f"Image file not found: {image_filepath}")
-        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        publish_failure(ch, properties, job_id, f"Image file not found: {image_filepath}") # notify the failure to the pipeline
+        ch.basic_ack(delivery_tag=method.delivery_tag)
         return
 
     try: 
@@ -26,7 +39,8 @@ def callback(ch, method, properties, body):
         text = analyze_image(image_filepath)
     except Exception as e:
         print(f"Error while analyzing the image: {e}")
-        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        publish_failure(ch, properties, job_id, str(e)) # notify the failure to the pipeline
+        ch.basic_ack(delivery_tag=method.delivery_tag)
         return
 
     # send extracted text to another queue
@@ -35,11 +49,9 @@ def callback(ch, method, properties, body):
         "text": text,
     }
 
-    ch.exchange_declare(exchange='pipeline', exchange_type='topic', durable=True)
-    
     # Publish the extracted text on the other queue
     ch.basic_publish(
-        exchange='pipeline',                 # default exchange: routing_key = queue name
+        exchange='pipeline',                 # topic exchange: routed to every queue bound to the routing key
         routing_key='ocr.processed',
         body=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
         properties=pika.BasicProperties(
@@ -64,6 +76,8 @@ def main():
     connection = pika.BlockingConnection(pika.URLParameters(connection_url))
     channel = connection.channel()
 
+    channel.exchange_declare(exchange='pipeline', exchange_type='topic', durable=True)
+    
     channel.queue_declare(
         queue='ocr.processing',
         durable=True

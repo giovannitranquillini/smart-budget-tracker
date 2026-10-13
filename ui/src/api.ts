@@ -128,6 +128,13 @@ export const waitForBudgetRecord = (
       resolve(JSON.parse((event as MessageEvent<string>).data))
     })
 
+    // not 'error': EventSource already uses it for connection errors
+    source.addEventListener('failed', (event) => {
+      close()
+      const { error }: { error: string } = JSON.parse((event as MessageEvent<string>).data)
+      reject(new Error(error))
+    })
+
     signal?.addEventListener('abort', () => {
       close()
       reject(signal.reason)

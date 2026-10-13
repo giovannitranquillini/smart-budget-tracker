@@ -62,7 +62,7 @@ services:
     depends_on:
       ollama:
         condition: service_healthy
-    entrypoint: ["sh", "-c", "OLLAMA_HOST=http://ollama:11434 ollama pull qwen2.5:7b"]
+    entrypoint: ["sh", "-c", "OLLAMA_HOST=http://ollama:11434 ollama pull qwen2.5:3b"]
     restart: "no"
 
   # Application Services
@@ -105,8 +105,6 @@ services:
     environment:
       RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672/
       BACKEND_URL: http://backend:3001
-    ports:
-      - "3002:3002"
     depends_on:
       rabbitmq:
         condition: service_healthy
