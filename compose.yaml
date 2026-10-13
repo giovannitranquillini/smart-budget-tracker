@@ -17,6 +17,24 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d smart_budget_tracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-off job: applies the Prisma migrations (tables and default categories) before the backend starts
+  migrate:
+    build:
+      context: ./backend
+      target: build # the stage with the Prisma CLI and the migrations
+    environment:
+      DATABASE_URL: postgres://admin:admin@postgres:5432/smart_budget_tracker
+    command: ["pnpm", "exec", "prisma", "migrate", "deploy"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
   
   rabbitmq: 
     build: ./rabbitmq
@@ -92,8 +110,8 @@ services:
       - audio_files:/audio_files
       - image_files:/image_files
     depends_on:
-      postgres:
-        condition: service_started
+      migrate:
+        condition: service_completed_successfully
       rabbitmq:
         condition: service_healthy
     

@@ -9,33 +9,74 @@ end
 participantgroup **AI**
 participant AI Backend
 participant speech-to-text
+participant OCR
 participant LLM
 end
 
-User->UI:Register audio to transcribe
-User<--UI:confirm
-UI->Domain Backend:<align:center>HTTP \n //multipart/form-data//
-note over Domain Backend:Here the //domain backend// \nwill store the **audio file** \n in a **temporary** storage 
-note over AI Backend:The //AI backend// group uses\n an **event-driven communication**\n to simulate a system that should \nsupport many requests
-group transcription [AI]
-Domain Backend->>AI Backend:<align:center>**msg**: publish \nto queue "//transcriber//"
+alt audio
+User->UI:Record an audio
+UI->Domain Backend:<align:center>**HTTP** POST /budget/record/audio\n//multipart/form-data//
+note over Domain Backend:Stores the **audio file**\nin a **temporary** storage
+else image
+User->UI:Upload a receipt photo
+UI->Domain Backend:<align:center>**HTTP** POST /budget/record/image\n//multipart/form-data//
+note over Domain Backend:Stores the **image file**\nin a **temporary** storage
+end
+UI<--Domain Backend:jobId
+UI->Domain Backend:<align:center>**SSE** GET /budget/record/{audio|image}/{jobId}/events
+
+note over AI Backend:The //AI// group uses an **event-driven**\n**communication** over RabbitMQ: requests go\nto **queues**, results are published as **events**\non the //pipeline// **topic exchange**
+
+group extraction [AI]
+alt audio
+Domain Backend->>AI Backend:<align:center>**msg**: queue\n"//audio.processing//"
 activate AI Backend
-AI Backend->>speech-to-text:<align:center>**msg**: publish \nto queue "//speech-to-text//"
+AI Backend->>speech-to-text:<align:center>**msg**: queue\n"//speech_to_text.processing//"
+deactivate AI Backend
 activate speech-to-text
-speech-to-text->AI Backend:<align:center>**gRPC**: transcription
+speech-to-text->>AI Backend:<align:center>**event**: //pipeline//\nkey "//audio.processed//"
+speech-to-text-->>Domain Backend:<align:center>**event**: stage\nbinding "//*.processed//"
 deactivate speech-to-text
-AI Backend->>LLM:<align:center>**msg**: publish \nto queue "//llm//"
+else image
+Domain Backend->>AI Backend:<align:center>**msg**: queue\n"//image.processing//"
+activate AI Backend
+AI Backend->>OCR:<align:center>**msg**: queue\n"//ocr.processing//"
+deactivate AI Backend
+activate OCR
+OCR->>AI Backend:<align:center>**event**: //pipeline//\nkey "//ocr.processed//"
+OCR-->>Domain Backend:<align:center>**event**: stage\nbinding "//*.processed//"
+deactivate OCR
+end
+Domain Backend-->>UI:<align:center>**SSE** event //stage//
+
+activate AI Backend
+AI Backend->Domain Backend:<align:center>**HTTP** GET /budget/category
+AI Backend<--Domain Backend:categories
+note over AI Backend:Builds the prompt with\nthe text and the categories
+AI Backend->>LLM:<align:center>**msg**: queue\n"//llm.processing//"
+deactivate AI Backend
 activate LLM
-LLM->AI Backend:<align:center>**gRPC**: budget record \npayload
+LLM->>AI Backend:<align:center>**event**: //pipeline//\nkey "//llm.processed//"
+LLM-->>Domain Backend:<align:center>**event**: stage\nbinding "//*.processed//"
 deactivate LLM
-AI Backend->>Domain Backend:<align:center>**msg**: publish to \nqueue "//budget-record//"
+Domain Backend-->>UI:<align:center>**SSE** event //stage//
+activate AI Backend
+AI Backend->>Domain Backend:<align:center>**msg**: queue\n"//budget_record.processed//"
 deactivate AI Backend
 end
-Domain Backend-->>PostgreSQL:<align:center>Save a new budget record
+
+note over Domain Backend,LLM:**On failure** every AI step publishes "//<step>.failed//" on //pipeline//:\nthe //Domain Backend// receives it (binding "//*.failed//") and sends the **SSE** event //failed// to the UI
+
+Domain Backend-->>UI:<align:center>**SSE** event //budget-record//\n(draft)
+UI-->User:Show the pre-filled form
+User->UI:Review and confirm
+UI->Domain Backend:<align:center>**HTTP** POST /budget/record
+Domain Backend->PostgreSQL:Save the budget record
 
 lifelinestyle User ;solid
 lifelinestyle UI ;solid
 lifelinestyle Domain Backend ;solid
 lifelinestyle AI Backend ;solid
 lifelinestyle speech-to-text ;solid
+lifelinestyle OCR ;solid
 lifelinestyle LLM ;solid
