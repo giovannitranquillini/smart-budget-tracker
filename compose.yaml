@@ -89,7 +89,7 @@ services:
   # - AI Backend (orchestrator, speech-to-text, llm): Node.js + Python
 
   web: 
-    build: ./ui
+    build: ./web
     container_name: web
     environment:
       NODE_ENV: development
