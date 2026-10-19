@@ -8,6 +8,7 @@
     "ignoreDeprecations": "6.0",
     "skipLibCheck": true,
 
+    "rootDir": "api",
     "outDir": "dist",
     "types": ["node"],
     "resolveJsonModule": true,
@@ -19,6 +20,6 @@
       "@core/*": ["core/*"]
     }
   },
-  "include": ["**/*"],
+  "include": ["api/**/*"],
   "exclude": ["**/*.spec.ts", "dist", "node_modules"]
 }

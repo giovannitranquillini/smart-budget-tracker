@@ -1,12 +1,13 @@
 // src/api.ts
-import type { BudgetCategory, BudgetRecord, BudgetRecordDraft, BudgetRecordSource, NewBudgetRecord, PipelineStage } from './types'
+import type { BudgetCategory, BudgetRecord, BudgetRecordDraft, BudgetRecordSource, BudgetRecordType, NewBudgetRecord, PipelineStage } from './types'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
 /** Record as returned by GET /budget/record (category included by the backend). */
 type BudgetRecordResponse = {
   id: string
-  amount: number
+  type: BudgetRecordType
+  amount: number // in cents
   description: string
   date: string
   categoryId: string
@@ -42,6 +43,7 @@ export const listBudgetRecords = async (): Promise<BudgetRecord[]> => {
     date: record.date,
     description: record.description,
     category: record.category?.name ?? '—',
+    type: record.type,
     amount: record.amount,
   }))
 }

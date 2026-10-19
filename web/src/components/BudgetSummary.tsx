@@ -1,12 +1,10 @@
 // src/components/BudgetSummary.tsx
+import { formatCents } from '../money'
 import type { BudgetRecord } from '../types'
 
 type BudgetSummaryProps = {
   records: BudgetRecord[]
 }
-
-const formatAmount = (amount: number) =>
-  new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'EUR' }).format(amount)
 
 // Income and expenses keep the same colors as the amounts in RecordsTable.
 const INCOME_COLOR = 'bg-teal-600'
@@ -26,7 +24,7 @@ function StatTile({ label, value, dotClassName }: StatTileProps) {
         {dotClassName && <span className={`h-2 w-2 rounded-full ${dotClassName}`} aria-hidden="true" />}
         {label}
       </span>
-      <span className="text-2xl font-semibold tracking-tight text-slate-900">{formatAmount(value)}</span>
+      <span className="text-2xl font-semibold tracking-tight text-slate-900">{formatCents(value)}</span>
     </div>
   )
 }
@@ -45,26 +43,27 @@ function ComparisonBar({ label, value, max, colorClassName }: ComparisonBarProps
     <div className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-3 text-sm">
       <span className="text-slate-500">{label}</span>
 
-      <div className="h-3 rounded-full bg-slate-100" title={`${label}: ${formatAmount(value)}`}>
+      <div className="h-3 rounded-full bg-slate-100" title={`${label}: ${formatCents(value)}`}>
         <div className={`h-full rounded-full ${colorClassName}`} style={{ width: `${width}%` }} />
       </div>
 
-      <span className="font-medium tabular-nums text-slate-900">{formatAmount(value)}</span>
+      <span className="font-medium tabular-nums text-slate-900">{formatCents(value)}</span>
     </div>
   )
 }
 
 /**
- * Totals of the loaded records: income (positive amounts), expenses (negative amounts)
+ * Totals of the loaded records: income, expenses (by record type)
  * and their balance, plus a bar chart comparing income and expenses on the same scale.
  */
 export default function BudgetSummary({ records }: BudgetSummaryProps) {
+  // In cents: summed as integers, converted to euros only when shown.
   let income = 0
   let expenses = 0
 
-  for (const { amount } of records) {
-    if (amount >= 0) income += amount
-    else expenses += -amount
+  for (const { type, amount } of records) {
+    if (type === 'income') income += amount
+    else expenses += amount
   }
 
   const balance = income - expenses

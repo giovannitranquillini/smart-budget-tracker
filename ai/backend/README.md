@@ -24,9 +24,8 @@ Consumes the queues `audio.processing`, `image.processing` and the events `audio
 
 ```bash
 (cd messaging && pnpm install)
-cd api
 pnpm install
-export RABBITMQ_URL=amqp://admin:admin@localhost:5672/
+cp .env.template .env   # then set your RabbitMQ credentials
 pnpm dev
 ```
 

@@ -10,15 +10,15 @@ services:
     image: postgres:18-alpine
     container_name: postgres
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: smart_budget_tracker
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d smart_budget_tracker"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -29,7 +29,7 @@ services:
       context: ./backend
       target: build # the stage with the Prisma CLI and the migrations
     environment:
-      DATABASE_URL: postgres://admin:admin@postgres:5432/smart_budget_tracker
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     command: ["pnpm", "exec", "prisma", "migrate", "deploy"]
     depends_on:
       postgres:
@@ -40,8 +40,8 @@ services:
     build: ./rabbitmq
     container_name: rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -80,7 +80,9 @@ services:
     depends_on:
       ollama:
         condition: service_healthy
-    entrypoint: ["sh", "-c", "OLLAMA_HOST=http://ollama:11434 ollama pull qwen2.5:3b"]
+    environment:
+      OLLAMA_MODEL: ${OLLAMA_MODEL}
+    entrypoint: ["sh", "-c", "OLLAMA_HOST=http://ollama:11434 ollama pull $${OLLAMA_MODEL}"]
     restart: "no"
 
   # Application Services
@@ -100,8 +102,8 @@ services:
     build: ./backend
     container_name: backend
     environment:
-      DATABASE_URL: postgres://admin:admin@postgres:5432/smart_budget_tracker
-      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672/
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
       AUDIO_STORAGE_PATH: /audio_files
       IMAGE_STORAGE_PATH: /image_files
     ports:
@@ -116,12 +118,10 @@ services:
         condition: service_healthy
     
   ai-backend:
-    build: 
-      context: ./ai/backend
-      dockerfile: api/Dockerfile
+    build: ./ai/backend
     container_name: ai-backend
     environment:
-      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672/
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
       BACKEND_URL: http://backend:3001
     depends_on:
       rabbitmq:
@@ -133,7 +133,7 @@ services:
     build: ./ai/speech-to-text
     container_name: speech-to-text
     environment:
-      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672/
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
       AUDIO_STORAGE_PATH: /audio_files
     volumes:
       - audio_files:/audio_files
@@ -152,7 +152,7 @@ services:
     build: ./ai/ocr
     container_name: ocr
     environment:
-      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672/
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
       IMAGE_STORAGE_PATH: /image_files
     volumes:
       - image_files:/image_files
@@ -164,9 +164,9 @@ services:
     build: ./ai/llm
     container_name: llm
     environment:
-      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672/
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
       OLLAMA_HOST: http://ollama:11434
-      OLLAMA_MODEL: qwen2.5:3b
+      OLLAMA_MODEL: ${OLLAMA_MODEL}
     depends_on:
       rabbitmq:
         condition: service_healthy

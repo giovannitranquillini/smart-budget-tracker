@@ -13,7 +13,7 @@ logs/
 # Environment variables
 .env
 .env.*
-!.env.example
+!.env.template
 
 # Tooling caches
 coverage/

@@ -15,9 +15,15 @@ model BudgetCategory {
   budgetRecords   BudgetRecord[]
 }
 
+enum BudgetRecordType {
+  income
+  outcome
+}
+
 model BudgetRecord {
   id          String   @id @default(uuid())
-  amount      Float
+  amount      Int // amount in cents
+  type        BudgetRecordType
   description String
   date        DateTime
   categoryId  String

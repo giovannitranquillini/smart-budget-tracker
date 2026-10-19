@@ -5,6 +5,8 @@ export type BudgetRecord = {
   date: string
   description: string
   category: string
+  type: BudgetRecordType
+  // In cents, always positive: the direction is in type.
   amount: number
 }
 
@@ -13,13 +15,13 @@ export type BudgetCategory = {
   name: string
 }
 
-/** Whether the record is money spent or received: the backend stores it as the sign of the amount. */
-export type BudgetRecordType = 'expense' | 'income'
+/** Whether the record is money spent (outcome) or received (income). */
+export type BudgetRecordType = 'income' | 'outcome'
 
 /** Draft record extracted by the AI from audio or image, used to fill in the form (SSE event `budget-record`). */
 export type BudgetRecordDraft = {
   type: BudgetRecordType
-  // Always positive, the direction is in type.
+  // In cents, always positive: the direction is in type.
   amount: number
   category: string
   description: string
@@ -33,6 +35,8 @@ export type BudgetRecordSource = 'audio' | 'image'
 
 /** Accepted payload for creating a new budget record. */
 export type NewBudgetRecord = {
+  type: BudgetRecordType
+  // In cents, always positive: the direction is in type.
   amount: number
   description: string
   categoryId: string

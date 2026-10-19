@@ -54,11 +54,12 @@ export const CreateBudgetRecordInput = {
     body: {
         type: 'object',
         properties: {
-            amount: { type: 'number' },
+            amount: { type: 'integer', minimum: 1 },
+            type: { type: 'string', enum: ['income', 'outcome'] },
             description: { type: 'string' },
             categoryId: { type: 'string' }
         },
-        required: ['amount', 'description', 'categoryId']
+        required: ['amount', 'type', 'description', 'categoryId']
     },
     response: {
         201: {},

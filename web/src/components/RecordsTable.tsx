@@ -1,4 +1,5 @@
 // src/components/RecordsTable.tsx
+import { formatCents } from '../money'
 import type { BudgetRecord } from '../types'
 import { TrashIcon } from './ui/icons'
 
@@ -9,8 +10,8 @@ type RecordsTableProps = {
   deletingId?: string | null
 }
 
-const formatAmount = (amount: number) =>
-  new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'EUR' }).format(amount)
+// Expenses are shown with a minus sign, income without.
+const formatAmount = ({ type, amount }: BudgetRecord) => formatCents(type === 'outcome' ? -amount : amount)
 
 const formatDate = (date: string) =>
   new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(
@@ -58,10 +59,10 @@ export default function RecordsTable({ records, onDelete, deletingId }: RecordsT
 
                   <td
                     className={`whitespace-nowrap px-5 py-3 text-right font-mono tabular-nums ${
-                      record.amount < 0 ? 'text-rose-600' : 'text-teal-600'
+                      record.type === 'outcome' ? 'text-rose-600' : 'text-teal-600'
                     }`}
                   >
-                    {formatAmount(record.amount)}
+                    {formatAmount(record)}
                   </td>
 
                   <td className="px-5 py-3 text-right">

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import AudioRecorder, { type RecorderStatus } from './AudioRecorder'
 import ImageUploader, { type UploaderStatus } from './ImageUploader'
 import { createBudgetRecord, listBudgetCategories, uploadBudgetRecordAudio, uploadBudgetRecordImage, waitForBudgetRecord } from '../api'
+import { centsToEuros, eurosToCents } from '../money'
 import type { BudgetCategory, BudgetRecordDraft, BudgetRecordSource, BudgetRecordType, PipelineStage } from '../types'
 
 // The backend saves the file with the extension of the submitted filename.
@@ -17,9 +18,8 @@ const stopTracks = (recorder: MediaRecorder | null) => {
   recorder?.stream.getTracks().forEach((track) => track.stop())
 }
 
-// The backend stores the type in the sign of the amount: negative for expenses, positive for income.
 const RECORD_TYPES: { value: BudgetRecordType; label: string; activeClassName: string }[] = [
-  { value: 'expense', label: 'Expense', activeClassName: 'bg-rose-600 text-white' },
+  { value: 'outcome', label: 'Expense', activeClassName: 'bg-rose-600 text-white' },
   { value: 'income', label: 'Income', activeClassName: 'bg-teal-600 text-white' },
 ]
 
@@ -28,8 +28,8 @@ type RecordFormProps = {
 }
 
 export default function RecordForm({ onSubmitted }: RecordFormProps) {
-  const [recordType, setRecordType] = useState<BudgetRecordType>('expense')
-  // Always positive: the sign is applied on submit from the record type.
+  const [recordType, setRecordType] = useState<BudgetRecordType>('outcome')
+  // In euros, as typed: converted to cents on submit. Always positive: the direction is in the record type.
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
   const [categoryId, setCategoryId] = useState('')
@@ -122,7 +122,7 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
 
   const fillFromDraft = (draft: BudgetRecordDraft) => {
     setRecordType(draft.type)
-    setAmount(String(draft.amount))
+    setAmount(String(centsToEuros(draft.amount)))
     setDescription(draft.description)
 
     // The AI returns the category name, the select works with ids.
@@ -201,10 +201,9 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
     setIsSubmitting(true)
 
     try {
-      const absoluteAmount = Math.abs(Number(amount))
-
       await createBudgetRecord({
-        amount: recordType === 'expense' ? -absoluteAmount : absoluteAmount,
+        type: recordType,
+        amount: eurosToCents(Math.abs(Number(amount))),
         description,
         categoryId,
       })
@@ -276,7 +275,7 @@ export default function RecordForm({ onSubmitted }: RecordFormProps) {
           id="amount"
           type="number"
           step="0.01"
-          min="0"
+          min="0.01"
           required
           disabled={isProcessing}
           value={amount}
