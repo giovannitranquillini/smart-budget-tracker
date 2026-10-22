@@ -4,6 +4,8 @@ import swaggerUi from '@fastify/swagger-ui';
 import multipart from '@fastify/multipart';
 import cors from '@fastify/cors';
 
+import { connect, close } from './core/messaging/amqp.js';
+
 import { registerRoutes } from '@api/routes/index.js'
 import { BudgetService } from '@core/services/budget.service.js';
 import { registerConsumers } from './core/messaging/consumers/index.js';
@@ -60,6 +62,7 @@ const services = {
   imageService
 };
 
+await connect(); // Connect to RabbitMQ before starting the server
 registerRoutes(server, { ...services });
 registerConsumers({ ...services });
 
@@ -71,3 +74,13 @@ server.listen({ port: 3001, host: '0.0.0.0' }, (err, address) => {
   }
   console.log(`Smart Budget Tracker backend server listening at ${address}`)
 })
+
+// Graceful shutdown
+const shutdown = async () => {
+  await server.close();
+  await close();
+  process.exit(0);
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

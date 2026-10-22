@@ -1,14 +1,45 @@
 import logger from "@core/lib/logger.js";
-import amqp from "amqplib";
+import amqp, { type Channel, type ChannelModel } from "amqplib";
 
-const connectionUrl = process.env.RABBITMQ_URL;
+let connection: ChannelModel | null = null;
+let channel: Channel | null = null;
 
-if(!connectionUrl) {
-  throw new Error("RABBITMQ_URL environment variable is not defined");
+/**
+ * Opens a connection to the RabbitMQ server and creates a channel.
+ * If a connection is already open, it does nothing.
+ */
+async function connect() {
+  if (channel) return; // already connected
+
+  const connectionUrl = process.env.RABBITMQ_URL;
+  if (!connectionUrl) {
+    throw new Error("RABBITMQ_URL environment variable is not defined");
+  }
+
+  connection = await amqp.connect(connectionUrl);
+  channel = await connection.createChannel();
+  logger.info("[AMQP] Connected");
 }
 
-const connection = await amqp.connect(connectionUrl);
-const channel = await connection.createChannel();
+/**
+ * Closes the connection to the RabbitMQ server and the channel.
+ */
+async function close() {
+  await channel?.close();
+  await connection?.close();
+  channel = null;
+  connection = null;
+  logger.info("[AMQP] Connection closed");
+}
+
+/**
+ * Returns the AMQP channel.
+ * @returns The AMQP channel.
+ */
+function getChannel(): Channel {
+  if (!channel) throw new Error("[AMQP] Not connected: call connect() first");
+  return channel;
+}
 
 /**
  * Sends a message to the specified queue.
@@ -16,7 +47,7 @@ const channel = await connection.createChannel();
  * @param message The message to send.
  */
 function sendMessage(queue: string, message: string) {
-
+  const channel = getChannel();
   channel.assertQueue(queue, { durable: true }); // assert the queue exists, if not it will be created
   channel.sendToQueue(queue, Buffer.from(message), { persistent: true });
 }
@@ -36,6 +67,7 @@ function readMessage(
 
   const { queue, exchange, binding } = settings;
 
+  const channel = getChannel();
   channel.assertQueue(queue, { durable: true }); // assert the queue exists, if not it will be created
 
   if(exchange && binding) {
@@ -56,4 +88,4 @@ function readMessage(
   });
 }
 
-export { sendMessage, readMessage };
+export { connect, close, sendMessage, readMessage };
