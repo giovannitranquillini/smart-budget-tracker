@@ -1,7 +1,7 @@
-import { sendMessage, readMessage, publishMessage } from '../../messaging/amqp.js'
-import { buildPromptForTranscription, buildPromptForOcr } from '../prompt.js'
+import { sendMessage, readMessage, publishMessage } from '@core/messaging/amqp.js'
+import { buildPromptForTranscription, buildPromptForOcr } from '@core/lib/prompt.js'
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = process.env.BACKEND_URL;
 
 /**
  * Get current categories.

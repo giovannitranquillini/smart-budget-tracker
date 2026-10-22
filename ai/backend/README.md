@@ -4,8 +4,10 @@ Orchestrator of the AI pipeline. It forwards audio and images to [speech-to-text
 
 Consumes the queues `audio.processing`, `image.processing` and the events `audio.processed`, `ocr.processed`, `llm.processed`; sends to `speech_to_text.processing`, `ocr.processing`, `llm.processing` and `budget_record.processed`.
 
-- `api/`: the service (TypeScript)
-- `messaging/`: a small RabbitMQ helper (amqplib) used by the service
+- `src/index.ts`: entry point, registers the consumers
+- `src/core/messaging/`: the RabbitMQ helper (`amqp.ts`) and the queue consumers (`consumers/`)
+- `src/core/lib/logger.ts`: the pino logger
+- `src/core/lib/prompt.ts`: builds the LLM prompts
 
 ## Requirements
 
@@ -23,7 +25,6 @@ Consumes the queues `audio.processing`, `image.processing` and the events `audio
 ## Run locally
 
 ```bash
-(cd messaging && pnpm install)
 pnpm install
 cp .env.template .env   # then set your RabbitMQ credentials
 pnpm dev
