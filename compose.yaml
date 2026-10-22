@@ -37,7 +37,7 @@ services:
     restart: "no"
   
   rabbitmq: 
-    build: ./rabbitmq
+    image: rabbitmq:4-management
     container_name: rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}

@@ -77,7 +77,7 @@ The volumes contain the database, the uploaded files and the Ollama model: after
 | ocr | [`ai/ocr/`](ai/ocr) | Python, PaddleOCR | Reads the text of the receipt (CPU) |
 | llm | [`ai/llm/`](ai/llm) | Python | Asks the LLM to turn the text into a transaction (JSON) |
 | postgres | | PostgreSQL | Persistence |
-| rabbitmq | [`rabbitmq/`](rabbitmq) | RabbitMQ | Message broker |
+| rabbitmq | | RabbitMQ | Message broker |
 | ollama | | Ollama | Serves Qwen 2.5 on the GPU |
 
 ### Messaging
