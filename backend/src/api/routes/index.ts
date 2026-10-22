@@ -5,9 +5,11 @@ import { CreateBudgetCategoryInput, CreateBudgetRecordFromAudioInput, CreateBudg
 import { BudgetService } from '@core/services/budget.service.js';
 import { AudioService } from '@core/services/audio.service.js';
 import { ImageService } from '@core/services/image.service.js';
+import { JobService } from '@core/services/job.service.js';
 
 type serviceDeps = {
   budgetService: ReturnType<typeof BudgetService>;
+  jobService: ReturnType<typeof JobService>;
   audioService: ReturnType<typeof AudioService>;
   imageService: ReturnType<typeof ImageService>;
 };
@@ -75,7 +77,7 @@ export const registerRoutes = (server: FastifyInstance, deps: serviceDeps) => {
     });
 
     // Subscribe to the jobId to listen for pipeline progress and budget record drafts
-    const unsubscribe = deps.budgetService.subscribeToJob(jobId, {
+    const unsubscribe = deps.jobService.subscribe(jobId, {
       onStage: (stage) => {
         // a late stage event can arrive after the draft has already closed the stream
         if (reply.raw.writableEnded) return;
@@ -153,7 +155,7 @@ export const registerRoutes = (server: FastifyInstance, deps: serviceDeps) => {
     });
 
     // Subscribe to the jobId to listen for pipeline progress and budget record drafts
-    const unsubscribe = deps.budgetService.subscribeToJob(jobId, {
+    const unsubscribe = deps.jobService.subscribe(jobId, {
       onStage: (stage) => {
         // a late stage event can arrive after the draft has already closed the stream
         if (reply.raw.writableEnded) return;
@@ -270,14 +272,9 @@ export const registerRoutes = (server: FastifyInstance, deps: serviceDeps) => {
       logger.info(`[API] Deleting budget category ${id}.`);
       const result = await deps.budgetService.deleteBudgetCategory(id);
 
-      if (result === 'not-found') {
-        logger.warn(`[API] Budget category ${id} not found.`);
-        return reply.status(404).send({ error: 'Budget category not found' });
-      }
-
-      if (result === 'in-use') {
-        logger.warn(`[API] Budget category ${id} is used by some budget records.`);
-        return reply.status(409).send({ error: 'Budget category is used by some budget records' });
+      if (!result) {
+        logger.warn(`[API] Budget category ${id} could not be deleted.`);
+        return reply.status(409).send({ error: 'Budget category could not be deleted' });
       }
 
       reply.status(204).send();

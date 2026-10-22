@@ -33,6 +33,15 @@ pnpm dev
 
 The API is served at http://localhost:3001, its documentation at http://localhost:3001/docs.
 
+## Create a new migration
+
+The schema is in [`src/prisma/schema.prisma`](src/prisma/schema.prisma), the migrations in [`src/prisma/migrations`](src/prisma/migrations).
+With PostgreSQL running and `DATABASE_URL` exported (see above), edit the schema and run:
+
+```bash
+pnpm prisma:migrate --name <migration_name>   # creates the migration, applies it and regenerates the client
+```
+
 ## Run with Docker
 
 From the repository root (it also starts PostgreSQL and RabbitMQ, and applies the migrations with the `migrate` job):

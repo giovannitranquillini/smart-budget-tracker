@@ -7,6 +7,6 @@ export default defineConfig({
     path: "src/prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"] || "postgres://admin:admin@localhost:5432/smart_budget_tracker",
+    url: process.env["DATABASE_URL"],
   },
 });

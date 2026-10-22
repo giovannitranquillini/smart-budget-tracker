@@ -32,4 +32,4 @@ COPY --from=build --chown=node:node /app/dist ./dist
 RUN mkdir -p /audio_files /image_files && chown node:node /audio_files /image_files
 USER node
 EXPOSE 3001
-CMD ["node", "dist/src/api/index.js"]
+CMD ["node", "dist/src/index.js"]

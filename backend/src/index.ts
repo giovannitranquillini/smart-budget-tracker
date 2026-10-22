@@ -6,16 +6,18 @@ import cors from '@fastify/cors';
 
 import { registerRoutes } from '@api/routes/index.js'
 import { BudgetService } from '@core/services/budget.service.js';
-import { registerConsumers } from './consumers/index.js';
+import { registerConsumers } from './core/messaging/consumers/index.js';
 import { AudioService } from '@core/services/audio.service.js';
 import { ImageService } from '@core/services/image.service.js';
+import { prisma } from '@core/lib/prisma.js';
+import { JobService } from '@core/services/job.service.js';
 
 const server = fastify()
 
 // CORS configuration
 await server.register(cors, {
   origin: true,
-  methods: ['GET', 'HEAD', 'POST', 'DELETE'] // the default allows only GET, HEAD and POST
+  methods: ['GET', 'HEAD', 'POST', 'DELETE']
 });
 
 // File uploads (multipart/form-data)
@@ -46,12 +48,20 @@ await server.register(swaggerUi, {
   routePrefix: '/docs'
 });
 
-const budgetService = BudgetService();
+const budgetService = BudgetService({ prisma });
+const jobService = JobService();
 const audioService = AudioService();
 const imageService = ImageService();
 
-registerRoutes(server, {budgetService, audioService, imageService});
-registerConsumers({ budgetService });
+const services = {
+  budgetService,
+  jobService,
+  audioService,
+  imageService
+};
+
+registerRoutes(server, { ...services });
+registerConsumers({ ...services });
 
 // 0.0.0.0 to be reachable from outside the Docker container
 server.listen({ port: 3001, host: '0.0.0.0' }, (err, address) => {
