@@ -4,14 +4,15 @@ from faster_whisper import WhisperModel
 # Get the audio file path and returns the transcribed text.
 # source: https://github.com/SYSTRAN/faster-whisper
 
-def transcribe_audio(file_path):
-    print("Load Whisper model...", flush=True)
+print("Load Whisper model...", flush=True)
+    
+model = WhisperModel(
+    "large-v3-turbo",
+    device="cuda",
+    compute_type="int8_float16"
+)
 
-    model = WhisperModel(
-        "large-v3-turbo",
-        device="cuda",
-        compute_type="int8_float16"
-    )
+def transcribe_audio(file_path):
 
     print(f"Transcribing audio file: {file_path}...", flush=True)
 
