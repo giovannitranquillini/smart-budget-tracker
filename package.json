@@ -1,0 +1,25 @@
+{
+  "name": "smart-budget-tracker",
+  "version": "1.0.0",
+  "description": "An AI-powered budget tracker for those who are tired of doing it manually. Developed the old-fashioned way.",
+  "main": "index.js",
+  "directories": {
+    "doc": "doc"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/giovannitranquillini/smart-budget-tracker.git"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/giovannitranquillini/smart-budget-tracker/issues"
+  },
+  "homepage": "https://github.com/giovannitranquillini/smart-budget-tracker#readme",
+  "devDependencies": {
+    "prettier": "^3.9.10"
+  }
+}

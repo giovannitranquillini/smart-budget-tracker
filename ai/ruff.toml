@@ -1,0 +1,12 @@
+# ruff.toml
+target-version = "py312"   # Dockerfile version
+line-length = 120          # same as prettier
+
+[lint]
+select = [
+  "E", "W",  # PEP 8 style
+  "F",       # real errors: unused variables, missing imports...
+  "I",       # import ordering
+  "B",       # common bugs (flake8-bugbear)
+  "UP",      # modern syntax for Python 3.12
+]
