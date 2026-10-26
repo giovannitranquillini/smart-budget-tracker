@@ -3,6 +3,11 @@ import os
 from dotenv import load_dotenv
 import pika, sys, os
 import json
+from pydantic import BaseModel
+
+class LLMOutput(BaseModel):
+    jobId: str
+    budgetRecord: dict
 
 def publish_failure(ch, properties, job_id, error):
     ch.basic_publish(
@@ -36,10 +41,14 @@ def callback(ch, method, properties, body):
         ch.basic_ack(delivery_tag=method.delivery_tag)
         return
 
-    payload = {
-        "jobId": job_id,
-        "budgetRecord": budget_record,
-    }
+    # check llm output for errors
+    try:
+        payload = LLMOutput(jobId=job_id, budgetRecord=budget_record)
+    except Exception as e:
+        print(f"Error validating LLM output: {e}")
+        publish_failure(ch, properties, job_id, f"Invalid LLM output: {e}")  # routing_key='llm.failed'
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        return
 
     # Publish the budget record on the pipeline exchange: it is routed to every queue
     # bound to 'llm.processed' (the next step and the progress notifications)
