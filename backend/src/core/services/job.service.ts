@@ -22,7 +22,6 @@ export type JobListener = {
 // How long we keep a draft that arrived before the UI opened the SSE stream
 const DRAFT_TTL_MS = 60_000; // 1 minute
 
-// Module level: shared by every BudgetService instance
 const sseConnections = new Map<string, JobListener>(); // SSE connections
 const drafts = new Map<string, BudgetRecordDraft>(); // drafts that arrived before the UI opened the SSE stream
 const failures = new Map<string, string>(); // failures that arrived before the UI opened the SSE stream
