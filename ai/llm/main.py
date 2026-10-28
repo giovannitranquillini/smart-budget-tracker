@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 class LLMOutput(BaseModel):
     jobId: str
-    budgetRecord: dict
+    jsonLlmOutput: dict
 
 def publish_failure(ch, properties, job_id, error):
     ch.basic_publish(
@@ -34,7 +34,7 @@ def callback(ch, method, properties, body):
     
     # send everything to the LLM to generate the new record
     try:
-        budget_record = execute_llm(incoming_payload['prompt'], incoming_payload['text'])
+        json_llm_output = execute_llm(incoming_payload['prompt'], incoming_payload['text'])
     except Exception as e:
         print(f"Error during LLM execution: {e}")
         publish_failure(ch, properties, job_id, str(e))   # routing_key='llm.failed'
@@ -43,7 +43,7 @@ def callback(ch, method, properties, body):
 
     # check llm output for errors
     try:
-        payload = LLMOutput(jobId=job_id, budgetRecord=budget_record)
+        payload = LLMOutput(jobId=job_id, jsonLlmOutput=json_llm_output)
     except Exception as e:
         print(f"Error validating LLM output: {e}")
         publish_failure(ch, properties, job_id, f"Invalid LLM output: {e}")  # routing_key='llm.failed'
