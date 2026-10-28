@@ -98,7 +98,8 @@ const registerConsumers = () => {
   readMessage({ queue: 'llm.processed', exchange: 'pipeline', binding: 'llm.processed' }, (msg: any) => {
     console.log(`Received processed LLM output: ${msg}`);
 
-    sendMessage('budget_record.processed', msg);
+    const { jobId, jsonLlmOutput } = JSON.parse(msg);
+    sendMessage('budget_record.processed', JSON.stringify({ jobId, budgetRecord: jsonLlmOutput }));
   });
 }
 

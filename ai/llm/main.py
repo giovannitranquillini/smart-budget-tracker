@@ -55,7 +55,7 @@ def callback(ch, method, properties, body):
     ch.basic_publish(
         exchange='pipeline',
         routing_key='llm.processed',
-        body=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
+        body=payload.model_dump_json().encode('utf-8'),
         properties=pika.BasicProperties(
             content_type='application/json',
             delivery_mode=2,         # persistent message
@@ -65,7 +65,7 @@ def callback(ch, method, properties, body):
 
     # Ack only after the result has been published
     ch.basic_ack(delivery_tag=method.delivery_tag)
-    print(f" [x] New budget record generated")
+    print(" [x] New budget record generated")
 
 def main():
 
