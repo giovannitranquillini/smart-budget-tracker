@@ -19,7 +19,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 # ---- generate the Prisma client and compile TypeScript ----
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
-COPY package.json tsconfig.json prisma.config.ts ./
+COPY package.json tsconfig.json tsconfig.build.json prisma.config.ts ./
 COPY src ./src
 RUN pnpm run prisma:generate
 RUN pnpm run build

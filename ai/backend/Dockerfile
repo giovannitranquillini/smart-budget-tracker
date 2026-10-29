@@ -19,7 +19,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 # ---- compile TypeScript ----
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
-COPY package.json tsconfig.json ./
+COPY package.json tsconfig.json tsconfig.build.json ./
 COPY src ./src
 RUN pnpm run build
 
